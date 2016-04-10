@@ -4,6 +4,7 @@ import (
 	"engo.io/engo"
 	"engo.io/ecs"
 	"image/color"
+	"github.com/EngoEngine/TrafficManager/systems"
 )
 
 type myGame struct {}
@@ -20,24 +21,10 @@ func (*myGame) Preload() {
 func (*myGame) Setup(world *ecs.World) {
 	engo.SetBackground(color.White)
 
+	world.AddSystem(&engo.MouseSystem{})
 	world.AddSystem(&engo.RenderSystem{})
 
-	entity := ecs.NewEntity([]string{"RenderSystem"})
-
-	entity.AddComponent(&engo.SpaceComponent{
-		Position: engo.Point{10, 10},
-		Width: 303,
-		Height: 641,
-	})
-
-	texture := engo.Files.Image("city.png")
-	entity.AddComponent(engo.NewRenderComponent(
-		texture,
-		engo.Point{1, 1},
-		"city texture",
-	))
-
-	world.AddEntity(entity)
+	world.AddSystem(&systems.CityBuildingSystem{})
 }
 
 // Show is called whenever the other Scene becomes inactive, and this one becomes the active one
