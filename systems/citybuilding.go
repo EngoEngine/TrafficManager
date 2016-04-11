@@ -38,7 +38,7 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 	cb.world = w
 	fmt.Println("CityBuildingSystem was added to the Scene")
 
-	cb.mouseTracker = ecs.NewEntity([]string{"MouseSystem"})
+	cb.mouseTracker = ecs.NewEntity("MouseSystem")
 	cb.mouseTracker.AddComponent(&engo.MouseComponent{Track: true})
 	w.AddEntity(cb.mouseTracker)
 }
@@ -48,7 +48,7 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 func (cb *CityBuildingSystem) Update(dt float32) {
 	if engo.Keys.Get(engo.F1).JustPressed() {
 		fmt.Println("The gamer pressed F1")
-		entity := ecs.NewEntity([]string{"RenderSystem"})
+		entity := ecs.NewEntity("RenderSystem")
 
 		var (
 			mouse *engo.MouseComponent
