@@ -7,6 +7,13 @@ import (
 	"github.com/EngoEngine/TrafficManager/systems"
 )
 
+const (
+	KeyboardScrollSpeed = 400
+	EdgeScrollSpeed = KeyboardScrollSpeed
+	EdgeWidth = 20
+	ZoomSpeed = -0.125
+)
+
 type myGame struct {}
 
 // Type uniquely defines your game type
@@ -23,6 +30,13 @@ func (*myGame) Setup(world *ecs.World) {
 
 	world.AddSystem(&engo.MouseSystem{})
 	world.AddSystem(&engo.RenderSystem{})
+
+	kbs := engo.NewKeyboardScroller(KeyboardScrollSpeed, engo.W, engo.D, engo.S, engo.A)
+	kbs.BindKeyboard(engo.ArrowUp, engo.ArrowRight, engo.ArrowDown, engo.ArrowLeft)
+	world.AddSystem(kbs)
+
+	world.AddSystem(&engo.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
+	world.AddSystem(&engo.MouseZoomer{ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
 }
