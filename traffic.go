@@ -22,7 +22,7 @@ func (*myGame) Setup(world *ecs.World) {
 
 	world.AddSystem(&engo.RenderSystem{})
 
-	entity := ecs.NewEntity([]string{"RenderSystem"})
+	entity := ecs.NewEntity("RenderSystem")
 
 	entity.AddComponent(&engo.SpaceComponent{
 		Position: engo.Point{10, 10},
