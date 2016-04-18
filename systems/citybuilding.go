@@ -52,7 +52,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 
 		var (
 			mouse *engo.MouseComponent
-			ok bool
+			ok    bool
 		)
 
 		if mouse, ok = cb.mouseTracker.ComponentFast(mouse).(*engo.MouseComponent); !ok {
@@ -61,16 +61,19 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 
 		entity.AddComponent(&engo.SpaceComponent{
 			Position: engo.Point{mouse.MouseX, mouse.MouseY},
-			Width: 30,
-			Height: 64,
+			Width:    30,
+			Height:   64,
 		})
 
 		texture := engo.Files.Image("city.png")
-		entity.AddComponent(engo.NewRenderComponent(
+
+		rc := engo.NewRenderComponent(
 			texture,
-			engo.Point{0.1, 0.1},
+			engo.Point{0.5, 0.5},
 			"city texture",
-		))
+		)
+		rc.SetShader(engo.DefaultShader)
+		entity.AddComponent(rc)
 
 		cb.world.AddEntity(entity)
 	}
