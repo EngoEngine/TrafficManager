@@ -1,20 +1,20 @@
 package main
 
 import (
-	"engo.io/engo"
 	"engo.io/ecs"
-	"image/color"
+	"engo.io/engo"
 	"github.com/EngoEngine/TrafficManager/systems"
+	"image/color"
 )
 
 const (
 	KeyboardScrollSpeed = 400
-	EdgeScrollSpeed = KeyboardScrollSpeed
-	EdgeWidth = 20
-	ZoomSpeed = -0.125
+	EdgeScrollSpeed     = KeyboardScrollSpeed
+	EdgeWidth           = 20
+	ZoomSpeed           = -0.125
 )
 
-type myGame struct {}
+type myGame struct{}
 
 // Type uniquely defines your game type
 func (*myGame) Type() string { return "myGame" }
@@ -49,8 +49,8 @@ func (*myGame) Hide() {}
 
 func main() {
 	opts := engo.RunOptions{
-		Title: "Hello World",
-		Width: 400,
+		Title:  "Hello World",
+		Width:  400,
 		Height: 400,
 	}
 	engo.Run(opts, &myGame{})
