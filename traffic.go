@@ -6,45 +6,50 @@ import (
 	"image/color"
 )
 
-type myGame struct {}
+type myScene struct {}
+
+type City struct {
+	ecs.BasicEntity
+	engo.RenderComponent
+	engo.SpaceComponent
+}
 
 // Type uniquely defines your game type
-func (*myGame) Type() string { return "myGame" }
+func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
-func (*myGame) Preload() {
+func (*myScene) Preload() {
 	engo.Files.Add("assets/textures/city.png")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
-func (*myGame) Setup(world *ecs.World) {
+func (*myScene) Setup(world *ecs.World) {
 	engo.SetBackground(color.White)
 
 	world.AddSystem(&engo.RenderSystem{})
 
-	entity := ecs.NewEntity("RenderSystem")
+	city := City{BasicEntity: ecs.NewBasic()}
 
-	entity.AddComponent(&engo.SpaceComponent{
+	city.SpaceComponent = engo.SpaceComponent{
 		Position: engo.Point{10, 10},
 		Width: 303,
 		Height: 641,
-	})
+	}
 
 	texture := engo.Files.Image("city.png")
-	entity.AddComponent(engo.NewRenderComponent(
+	city.RenderComponent = engo.NewRenderComponent(
 		texture,
 		engo.Point{1, 1},
 		"city texture",
-	))
+	)
 
-	world.AddEntity(entity)
+	for _, system := range world.Systems() {
+		switch sys := system.(type) {
+		case *engo.RenderSystem:
+			sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
+		}
+	}
 }
-
-// Show is called whenever the other Scene becomes inactive, and this one becomes the active one
-func (*myGame) Show() {}
-
-// Hide is called when an other Scene becomes active
-func (*myGame) Hide() {}
 
 func main() {
 	opts := engo.RunOptions{
@@ -52,5 +57,5 @@ func main() {
 		Width: 400,
 		Height: 400,
 	}
-	engo.Run(opts, &myGame{})
+	engo.Run(opts, &myScene{})
 }
