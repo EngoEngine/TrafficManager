@@ -1,11 +1,12 @@
 package main
 
 import (
+	"image"
+	"image/color"
+
 	"engo.io/ecs"
 	"engo.io/engo"
 	"github.com/EngoEngine/TrafficManager/systems"
-	"image"
-	"image/color"
 )
 
 const (
@@ -15,18 +16,24 @@ const (
 	ZoomSpeed           = -0.125
 )
 
-type myGame struct{}
+type myScene struct{}
+
+type HUD struct {
+	ecs.BasicEntity
+	engo.RenderComponent
+	engo.SpaceComponent
+}
 
 // Type uniquely defines your game type
-func (*myGame) Type() string { return "myGame" }
+func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
-func (*myGame) Preload() {
+func (*myScene) Preload() {
 	engo.Files.Add("assets/textures/city.png")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
-func (*myGame) Setup(world *ecs.World) {
+func (*myScene) Setup(world *ecs.World) {
 	engo.SetBackground(color.White)
 
 	world.AddSystem(&engo.MouseSystem{})
@@ -41,42 +48,38 @@ func (*myGame) Setup(world *ecs.World) {
 
 	world.AddSystem(&systems.CityBuildingSystem{})
 
-	hud := ecs.NewEntity("RenderSystem")
-	hud.AddComponent(&engo.SpaceComponent{
+	hud := HUD{BasicEntity: ecs.NewBasic()}
+	hud.SpaceComponent = engo.SpaceComponent{
 		Position: engo.Point{0, engo.WindowHeight() - 200},
 		Width:    200,
 		Height:   200,
-	})
+	}
 
 	hudImage := image.NewUniform(color.RGBA{205, 205, 205, 255})
 	hudNRGBA := engo.ImageToNRGBA(hudImage, 200, 200)
 	hudImageObj := engo.NewImageObject(hudNRGBA)
 	hudTexture := engo.NewTexture(hudImageObj)
-	hudRC := engo.NewRenderComponent(
+
+	hud.RenderComponent = engo.NewRenderComponent(
 		hudTexture,
 		engo.Point{1, 1},
 		"hud",
 	)
+	hud.RenderComponent.SetShader(engo.HUDShader)
 
-	hudRC.SetShader(engo.HUDShader)
-	hud.AddComponent(hudRC)
-	world.AddEntity(hud)
+	for _, system := range world.Systems() {
+		switch sys := system.(type) {
+		case *engo.RenderSystem:
+			sys.Add(&hud.BasicEntity, &hud.RenderComponent, &hud.SpaceComponent)
+		}
+	}
 }
-
-// Show is called whenever the other Scene becomes inactive, and this one becomes the active one
-func (*myGame) Show() {}
-
-// Hide is called when an other Scene becomes active
-func (*myGame) Hide() {}
-
-// Exit is called when the user or the system requests to close the game
-func (*myGame) Exit() {}
 
 func main() {
 	opts := engo.RunOptions{
-		Title:  "Hello World",
+		Title:  "TrafficManager",
 		Width:  800,
 		Height: 800,
 	}
-	engo.Run(opts, &myGame{})
+	engo.Run(opts, &myScene{})
 }
