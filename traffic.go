@@ -1,11 +1,12 @@
 package main
 
 import (
-	"image"
 	"image/color"
+	"log"
 
 	"engo.io/ecs"
 	"engo.io/engo"
+	"engo.io/engo/common"
 	"github.com/EngoEngine/TrafficManager/systems"
 )
 
@@ -18,68 +19,64 @@ const (
 
 type myScene struct{}
 
-type HUD struct {
-	ecs.BasicEntity
-	engo.RenderComponent
-	engo.SpaceComponent
-}
-
 // Type uniquely defines your game type
 func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
-	engo.Files.Add("assets/textures/city.png")
+	err := engo.Files.LoadMany("textures/city.png", "fonts/Roboto-Regular.ttf")
+	if err != nil {
+		log.Println("[FATAL]", err)
+	}
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
 func (*myScene) Setup(world *ecs.World) {
-	engo.SetBackground(color.White)
+	common.SetBackground(color.RGBA{0xf0, 0xf0, 0xf0, 0xff})
 
-	world.AddSystem(&engo.MouseSystem{})
-	world.AddSystem(&engo.RenderSystem{})
-
-	kbs := engo.NewKeyboardScroller(KeyboardScrollSpeed, engo.W, engo.D, engo.S, engo.A)
-	kbs.BindKeyboard(engo.ArrowUp, engo.ArrowRight, engo.ArrowDown, engo.ArrowLeft)
-	world.AddSystem(kbs)
-
-	world.AddSystem(&engo.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
-	world.AddSystem(&engo.MouseZoomer{ZoomSpeed})
+	world.AddSystem(&common.RenderSystem{})
+	world.AddSystem(&common.MouseSystem{})
+	world.AddSystem(common.NewKeyboardScroller(KeyboardScrollSpeed, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis))
+	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
+	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
+	world.AddSystem(&systems.RoadBuildingSystem{})
+	world.AddSystem(&systems.HUDSystem{})
+	world.AddSystem(&systems.CommuterSystem{})
 
-	hud := HUD{BasicEntity: ecs.NewBasic()}
-	hud.SpaceComponent = engo.SpaceComponent{
-		Position: engo.Point{0, engo.WindowHeight() - 200},
-		Width:    200,
-		Height:   200,
+	fnt := common.Font{
+		URL:  "fonts/Roboto-Regular.ttf",
+		FG:   color.Black,
+		Size: 24,
+	}
+	err := fnt.CreatePreloaded()
+	if err != nil {
+		log.Println(err)
+		return
 	}
 
-	hudImage := image.NewUniform(color.RGBA{205, 205, 205, 255})
-	hudNRGBA := engo.ImageToNRGBA(hudImage, 200, 200)
-	hudImageObj := engo.NewImageObject(hudNRGBA)
-	hudTexture := engo.NewTexture(hudImageObj)
+	welcome := systems.HUDText{}
+	welcome.SpaceComponent.Width = engo.CanvasWidth()
+	welcome.SpaceComponent.Position = engo.Point{4, 4}
+	welcome.RenderComponent.Drawable = fnt.Render("Welcome! Press <B> to spawn cities. ")
 
-	hud.RenderComponent = engo.NewRenderComponent(
-		hudTexture,
-		engo.Point{1, 1},
-		"hud",
-	)
-	hud.RenderComponent.SetShader(engo.HUDShader)
+	welcome.RenderComponent.SetShader(common.HUDShader)
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
-		case *engo.RenderSystem:
-			sys.Add(&hud.BasicEntity, &hud.RenderComponent, &hud.SpaceComponent)
+		case *common.RenderSystem:
+			sys.Add(&welcome.BasicEntity, &welcome.RenderComponent, &welcome.SpaceComponent)
 		}
 	}
 }
 
 func main() {
 	opts := engo.RunOptions{
-		Title:  "TrafficManager",
-		Width:  800,
-		Height: 800,
+		Title:          "TrafficManager",
+		Width:          800,
+		Height:         800,
+		StandardInputs: true,
 	}
 	engo.Run(opts, &myScene{})
 }
