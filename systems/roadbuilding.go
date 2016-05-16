@@ -16,6 +16,8 @@ var (
 	colorRoadAvailable   = color.RGBA{0, 255, 0, 255}
 	colorRoadUnavailable = color.RGBA{255, 0, 0, 255}
 	colorRoadDefault     = color.RGBA{128, 128, 128, 255}
+
+	laneWidth float32 = 10
 )
 
 type Road struct {
@@ -27,11 +29,22 @@ type Road struct {
 }
 
 type RoadComponent struct {
-	Type      RoadType
-	From, To  ecs.BasicEntity
-	Commuters []*Commuter
+	Type     RoadType
+	From, To ecs.BasicEntity
+	Lanes    []*Lane
 
 	isHovered bool
+}
+
+type Lane struct {
+	ecs.BasicEntity
+	LaneComponent
+}
+
+type LaneComponent struct {
+	Type      RoadType
+	Commuters []*Commuter
+	Index     int
 }
 
 type Commuter struct {
@@ -45,6 +58,7 @@ type CommuterComponent struct {
 	DistanceTravelled float32
 	PreferredSpeed    float32
 	Road              *Road
+	Lane              *Lane
 
 	// TODO: stuff like reaction time, amount of people,
 }
@@ -120,28 +134,48 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			} else {
 
 				if r.selectedEntity.BasicEntity.ID() != e.BasicEntity.ID() {
-					// Build a Road
-					actualRoad := Road{BasicEntity: ecs.NewBasic()}
-					actualRoad.SpaceComponent = r.roadHint.SpaceComponent
-					actualRoad.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{}, Color: colorRoadDefault}
-					actualRoad.RenderComponent.SetZIndex(-1)
-					actualRoad.RenderComponent.SetShader(common.LegacyShader)
-					actualRoad.RoadComponent = RoadComponent{
-						Type: RoadBasic,
-						From: *r.selectedEntity.BasicEntity,
-						To:   *e.BasicEntity,
-					}
 
-					for _, system := range r.world.Systems() {
-						switch sys := system.(type) {
-						case *common.RenderSystem:
-							sys.Add(&actualRoad.BasicEntity, &actualRoad.RenderComponent, &actualRoad.SpaceComponent)
-						case *CommuterSystem:
-							sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent)
+					// Check if one exists already
+					var currentRoad *Road
+					for _, road := range r.selectedEntity.Roads {
+						if road.To.ID() == e.BasicEntity.ID() {
+							currentRoad = road
+							break
 						}
 					}
 
-					r.selectedEntity.Roads = append(r.selectedEntity.Roads, &actualRoad)
+					if currentRoad == nil {
+						// Build a Road
+						actualRoad := Road{BasicEntity: ecs.NewBasic()}
+						actualRoad.SpaceComponent = r.roadHint.SpaceComponent
+						actualRoad.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{}, Color: colorRoadDefault}
+						actualRoad.RenderComponent.SetZIndex(-1)
+						actualRoad.RenderComponent.SetShader(common.LegacyShader)
+						actualRoad.RoadComponent = RoadComponent{
+							Type: RoadBasic,
+							From: *r.selectedEntity.BasicEntity,
+							To:   *e.BasicEntity,
+						}
+						actualRoad.Lanes = []*Lane{&Lane{BasicEntity: ecs.NewBasic(), LaneComponent: LaneComponent{Index: 0}}}
+
+						for _, system := range r.world.Systems() {
+							switch sys := system.(type) {
+							case *common.RenderSystem:
+								sys.Add(&actualRoad.BasicEntity, &actualRoad.RenderComponent, &actualRoad.SpaceComponent)
+							case *CommuterSystem:
+								sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent, &actualRoad.SpaceComponent)
+							}
+						}
+
+						r.selectedEntity.Roads = append(r.selectedEntity.Roads, &actualRoad)
+					} else {
+						// Add a Lane to it
+						currentRoad.Lanes = append(currentRoad.Lanes, &Lane{
+							BasicEntity:   ecs.NewBasic(),
+							LaneComponent: LaneComponent{Index: len(currentRoad.Lanes)},
+						})
+						currentRoad.SpaceComponent.Height = laneWidth * float32(len(currentRoad.Lanes))
+					}
 
 					// Cleanup the roadHint
 					r.world.RemoveEntity(r.roadHint.BasicEntity)
@@ -206,7 +240,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 		centerA := engo.Point{(ab1.Max.X-ab1.Min.X)/2 + ab1.Min.X, (ab1.Max.Y-ab1.Min.Y)/2 + ab1.Min.Y}
 		centerB := engo.Point{(ab2.Max.X-ab2.Min.X)/2 + ab2.Min.X, (ab2.Max.Y-ab2.Min.Y)/2 + ab2.Min.Y}
 
-		roadWidth := float32(10)
+		roadWidth := laneWidth
 
 		// Euclidian distance between the two cities
 		roadLength := math.Sqrt(

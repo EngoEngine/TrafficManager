@@ -28,6 +28,7 @@ type commuterEntityCity struct {
 type commuterEntityRoad struct {
 	*ecs.BasicEntity
 	*RoadComponent
+	*common.SpaceComponent
 }
 
 type commuterEntityCommuter struct {
@@ -122,8 +123,8 @@ func (c *CommuterSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent) {
 	c.cities[basic.ID()] = commuterEntityCity{basic, city}
 }
 
-func (c *CommuterSystem) AddRoad(basic *ecs.BasicEntity, road *RoadComponent) {
-	c.roads[basic.ID()] = commuterEntityRoad{basic, road}
+func (c *CommuterSystem) AddRoad(basic *ecs.BasicEntity, road *RoadComponent, space *common.SpaceComponent) {
+	c.roads[basic.ID()] = commuterEntityRoad{basic, road, space}
 }
 
 func (c *CommuterSystem) AddCommuter(basic *ecs.BasicEntity, comm *CommuterComponent, space *common.SpaceComponent) {
@@ -151,43 +152,59 @@ func (c *CommuterSystem) Update(dt float32) {
 	for uid, estimate := range estimates {
 		city := c.cities[uid]
 		for _, road := range city.Roads {
+			if city.Population == 0 {
+				continue // with other Cities
+			}
+
 			// perRoad commuters want to leave this "minute"
 			perRoad := estimate / len(city.Roads)
 
-			curCmtrs := len(road.Commuters)
-			if curCmtrs == 0 || (road.Commuters[curCmtrs-1].DistanceTravelled > MinTravelDistance && perRoad > 0) {
-				c.newCommuter(road)
+			for _, lane := range road.Lanes {
+				curCmtrs := len(lane.Commuters)
+				if perRoad > 0 && (curCmtrs == 0 || lane.Commuters[curCmtrs-1].DistanceTravelled > MinTravelDistance) {
+					c.newCommuter(road, lane)
+					perRoad--
+				}
 			}
 		}
 	}
 
 	// Move commuters
 	for _, road := range c.roads {
-		for index, comm := range road.Commuters {
-			// This bit computes how far we travel, and if we can drive through other cars in front of us (hint: of course not!)
-			newDistance := comm.PreferredSpeed * dt * c.gameSpeed
+		var (
+			alpha = (road.Rotation / 180) * math.Pi
+			beta  = float32(0.5) * math.Pi
+			gamma = 0.5*math.Pi - alpha
 
-			if index > 0 { // so there is a car in front of us
-				distanceToNext := road.Commuters[index-1].DistanceTravelled - comm.DistanceTravelled
-				if distanceToNext-newDistance < MinTravelDistance {
-					newDistance = distanceToNext - MinTravelDistance
+			sinAlpha = math.Sin(alpha)
+			sinBeta  = math.Sin(beta)
+			sinGamma = math.Sin(gamma)
+		)
+
+		for _, lane := range road.Lanes {
+			for commIndex, comm := range lane.Commuters {
+				// This bit computes how far we travel, and if we can drive through other cars in front of us (hint: of course not!)
+				newDistance := comm.PreferredSpeed * dt * c.gameSpeed
+
+				if commIndex > 0 { // so there is a car in front of us
+					distanceToNext := lane.Commuters[commIndex-1].DistanceTravelled - comm.DistanceTravelled
+					if distanceToNext-newDistance < MinTravelDistance {
+						newDistance = distanceToNext - MinTravelDistance
+					}
 				}
+
+				comm.DistanceTravelled += newDistance
+
+				// Using the Law of Sines, we now compute the dx (c) and dy (a)
+				b_length := newDistance
+
+				b_part := b_length / sinBeta
+				a_length := sinAlpha * b_part
+				c_length := sinGamma * b_part
+
+				comm.Position.Y += a_length
+				comm.Position.X += c_length
 			}
-
-			comm.DistanceTravelled += newDistance
-
-			// Using the Law of Sines, we now compute the dx (c) and dy (a)
-			b_length := newDistance
-			alpha := (comm.Rotation / 180) * math.Pi
-			beta := float32(0.5) * math.Pi
-			gamma := 0.5*math.Pi - alpha
-
-			b_part := b_length / math.Sin(beta)
-			a_length := math.Sin(alpha) * b_part
-			c_length := math.Sin(gamma) * b_part
-
-			comm.Position.Y += a_length
-			comm.Position.X += c_length
 		}
 	}
 
@@ -195,12 +212,10 @@ func (c *CommuterSystem) Update(dt float32) {
 	for _, comm := range c.commuters {
 		if comm.DistanceTravelled > comm.Road.SpaceComponent.Width-15 {
 			// Done!
-			log.Println(comm.ID(), "reached his/her destination")
-
-			if len(comm.Road.Commuters) > 0 {
-				comm.Road.Commuters = comm.Road.Commuters[1:]
+			if len(comm.Lane.Commuters) > 0 {
+				comm.Lane.Commuters = comm.Lane.Commuters[1:]
 			} else {
-				comm.Road.Commuters = []*Commuter{}
+				comm.Lane.Commuters = []*Commuter{}
 			}
 
 			city := c.cities[comm.Road.To.ID()]
@@ -218,7 +233,7 @@ func (c *CommuterSystem) commuterEstimates() map[uint64]int {
 
 	diff := float32(math.MaxFloat32)
 	for _, rushHr := range rushHours {
-		d := math.Pow(math.Abs(hr-rushHr), 6)
+		d := math.Pow(math.Abs(hr-rushHr), 3)
 		if d < diff {
 			diff = d
 		}
@@ -237,10 +252,11 @@ func (c *CommuterSystem) commuterEstimates() map[uint64]int {
 	return estimates
 }
 
-func (c *CommuterSystem) newCommuter(road *Road) {
+func (c *CommuterSystem) newCommuter(road *Road, lane *Lane) {
 	cmtr := &Commuter{BasicEntity: ecs.NewBasic()}
 	cmtr.PreferredSpeed = float32(rand.Intn(60) + 80) // 80 being minimum speed, 40 being the variation
 	cmtr.Road = road
+	cmtr.Lane = lane
 	cmtr.SpaceComponent = common.SpaceComponent{
 		Position: road.SpaceComponent.Position,
 		Width:    12,
@@ -251,6 +267,15 @@ func (c *CommuterSystem) newCommuter(road *Road) {
 		Drawable: common.Rectangle{},
 		Color:    color.RGBA{uint8(rand.Intn(255)), uint8(rand.Intn(255)), uint8(rand.Intn(255)), 255},
 	}
+
+	// Translate the commuter for the given lane (hopefully!) - TODO: this can be a Shader
+	angle := (cmtr.Rotation / 180) * math.Pi
+	lanewidth := float32(lane.Index) * laneWidth
+	dx := math.Sin(angle) * (lanewidth + 2) // 2 == (laneHeight - carHeight)/2
+	dy := math.Cos(angle) * (lanewidth + 2) // 2 == (laneHeight - carHeight)/2
+	cmtr.SpaceComponent.Position.X -= dx
+	cmtr.SpaceComponent.Position.Y += dy
+
 	cmtr.SetZIndex(50)
 	cmtr.SetShader(common.LegacyShader)
 
@@ -266,5 +291,5 @@ func (c *CommuterSystem) newCommuter(road *Road) {
 		}
 	}
 
-	road.Commuters = append(road.Commuters, cmtr)
+	lane.Commuters = append(lane.Commuters, cmtr)
 }
