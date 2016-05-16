@@ -24,7 +24,8 @@ func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
-	err := engo.Files.LoadMany("textures/city.png", "fonts/Roboto-Regular.ttf")
+	common.AudioSystemPreload()
+	err := engo.Files.LoadMany("textures/city.png", "fonts/Roboto-Regular.ttf", "sfx/crash.wav")
 	if err != nil {
 		log.Println("[FATAL]", err)
 	}
@@ -36,6 +37,7 @@ func (*myScene) Setup(world *ecs.World) {
 
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
+	world.AddSystem(&common.AudioSystem{})
 	world.AddSystem(common.NewKeyboardScroller(KeyboardScrollSpeed, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis))
 	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed})

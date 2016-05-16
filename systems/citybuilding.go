@@ -10,6 +10,10 @@ import (
 	"engo.io/engo/common"
 )
 
+const (
+	cityZIndex = 100
+)
+
 type MouseTracker struct {
 	ecs.BasicEntity
 	common.MouseComponent
@@ -76,6 +80,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 			Drawable: common.Rectangle{},
 			Color:    color.Black,
 		}
+		city.RenderComponent.SetZIndex(cityZIndex)
 		city.RenderComponent.SetShader(common.LegacyShader)
 
 		city.CityComponent = CityComponent{

@@ -56,9 +56,17 @@ type Commuter struct {
 
 type CommuterComponent struct {
 	DistanceTravelled float32
+
+	Speed             float32
 	PreferredSpeed    float32
+	BrakeSpeed        float32
+	AccelerationSpeed float32
+
+	SwitchingLane     bool
+	SwitchingProgress float32
 	Road              *Road
 	Lane              *Lane
+	NewLane           *Lane
 
 	// TODO: stuff like reaction time, amount of people,
 }
@@ -148,7 +156,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 						// Build a Road
 						actualRoad := Road{BasicEntity: ecs.NewBasic()}
 						actualRoad.SpaceComponent = r.roadHint.SpaceComponent
-						actualRoad.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{}, Color: colorRoadDefault}
+						actualRoad.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{BorderWidth: 0.5, BorderColor: color.Black}, Color: colorRoadDefault}
 						actualRoad.RenderComponent.SetZIndex(-1)
 						actualRoad.RenderComponent.SetShader(common.LegacyShader)
 						actualRoad.RoadComponent = RoadComponent{
