@@ -6,6 +6,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	"fmt"
 	"github.com/luxengine/math"
 )
 
@@ -17,7 +18,8 @@ var (
 	colorRoadUnavailable = color.RGBA{255, 0, 0, 255}
 	colorRoadDefault     = color.RGBA{128, 128, 128, 255}
 
-	laneWidth float32 = 10
+	costPerMeter         = 100
+	laneWidth    float32 = 10
 )
 
 type Road struct {
@@ -274,13 +276,23 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			dirY = -1
 		}
 
+		newLanes := float32(1)
+		if hoveredId >= 0 {
+			for _, road := range r.selectedEntity.Roads {
+				if road.To.ID() == r.cities[hoveredId].ID() {
+					newLanes += float32(len(road.Lanes))
+					break
+				}
+			}
+		}
+
 		r.roadHint.SpaceComponent = common.SpaceComponent{
 			Position: engo.Point{
 				centerB.X - roadWidth/2,
 				centerB.Y - roadWidth/2,
 			},
 			Width:    roadLength,
-			Height:   roadWidth,
+			Height:   roadWidth * newLanes,
 			Rotation: rotation * dirY,
 		}
 

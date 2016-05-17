@@ -1,6 +1,7 @@
 package systems
 
 import (
+	"fmt"
 	"image/color"
 	"log"
 	"math/rand"
@@ -9,8 +10,11 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"fmt"
 	"github.com/luxengine/math"
+)
+
+var (
+	cashAmount float32
 )
 
 const (
@@ -40,10 +44,13 @@ type commuterEntityCommuter struct {
 type CommuterSystem struct {
 	world *ecs.World
 
-	gameSpeed      float32
-	gameTime       time.Time
-	clock          HUDText
-	clockFont      common.Font
+	gameSpeed float32
+	gameTime  time.Time
+	clock     HUDText
+
+	robotoFont common.Font
+	cash       HUDText
+
 	previousSecond int
 
 	cities    map[uint64]commuterEntityCity
@@ -75,14 +82,15 @@ func (c *CommuterSystem) addClock() {
 		height  float32 = 24
 		width   float32 = height * 2.5
 		padding float32 = 4
+		zindex  float32 = 1000
 	)
 
-	c.clockFont = common.Font{
+	c.robotoFont = common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
 		FG:   color.Black,
 		Size: 24,
 	}
-	err := c.clockFont.CreatePreloaded()
+	err := c.robotoFont.CreatePreloaded()
 	if err != nil {
 		log.Println(err)
 		return
@@ -95,16 +103,36 @@ func (c *CommuterSystem) addClock() {
 		Height:   height + 2*padding,
 	}
 	c.clock.RenderComponent = common.RenderComponent{
-		Drawable: c.clockFont.Render(c.gameTime.Format("15:04")),
+		Drawable: c.robotoFont.Render(c.gameTime.Format("15:04")),
 		Color:    color.Black,
 	}
-	c.clock.SetZIndex(1000)
+	c.clock.SetZIndex(zindex)
 	c.clock.SetShader(common.HUDShader)
 
 	for _, system := range c.world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
 			sys.Add(&c.clock.BasicEntity, &c.clock.RenderComponent, &c.clock.SpaceComponent)
+		}
+	}
+
+	c.cash.BasicEntity = ecs.NewBasic()
+	c.cash.SpaceComponent = common.SpaceComponent{
+		Position: engo.Point{engo.CanvasWidth() - 2*width - padding, padding},
+		Width:    width + 2*padding,
+		Height:   height + 2*padding,
+	}
+	c.cash.RenderComponent = common.RenderComponent{
+		Drawable: c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount)),
+		Color:    color.Black,
+	}
+	c.cash.SetZIndex(zindex)
+	c.cash.SetShader(common.HUDShader)
+
+	for _, system := range c.world.Systems() {
+		switch sys := system.(type) {
+		case *common.RenderSystem:
+			sys.Add(&c.cash.BasicEntity, &c.cash.RenderComponent, &c.cash.SpaceComponent)
 		}
 	}
 }
@@ -162,7 +190,7 @@ func (c *CommuterSystem) Update(dt float32) {
 	// Update clock
 	c.gameTime = c.gameTime.Add(time.Duration(float32(time.Minute) * dt * c.gameSpeed))
 	c.clock.Drawable.Close()
-	c.clock.Drawable = c.clockFont.Render(c.gameTime.Format("15:04"))
+	c.clock.Drawable = c.robotoFont.Render(c.gameTime.Format("15:04"))
 	c.clock.Position.X = engo.CanvasWidth() - c.clock.Width
 
 	engo.SetTitle(fmt.Sprintf("%f FPS", engo.Time.FPS()))
