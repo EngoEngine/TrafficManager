@@ -112,6 +112,9 @@ func (h *HUDSystem) New(w *ecs.World) {
 			sys.Add(&h.hudCityTitle.BasicEntity, &h.hudCityTitle.RenderComponent, &h.hudCityTitle.SpaceComponent)
 		}
 	}
+
+	// TODO: move this code!
+	engo.Input.RegisterAxis("zoom", engo.AxisKeyPair{engo.NumSubtract, engo.NumAdd}, engo.AxisKeyPair{engo.Dash, engo.Equals})
 }
 
 func (h *HUDSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent, mouse *common.MouseComponent) {
@@ -119,6 +122,22 @@ func (h *HUDSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent, mouse *
 }
 
 func (h *HUDSystem) Update(dt float32) {
+	// TODO: move this code!
+	switch engo.Input.Axis("zoom").Value() {
+	case engo.AxisMin:
+		engo.Mailbox.Dispatch(common.CameraMessage{
+			Value:       dt,
+			Incremental: true,
+			Axis:        common.ZAxis,
+		})
+	case engo.AxisMax:
+		engo.Mailbox.Dispatch(common.CameraMessage{
+			Value:       -dt,
+			Incremental: true,
+			Axis:        common.ZAxis,
+		})
+	}
+
 	// Possibly update the location
 	h.hudFrame.SpaceComponent.Position.Y = engo.CanvasHeight() - hudHeight
 	h.hudFrame.Width = engo.CanvasWidth()

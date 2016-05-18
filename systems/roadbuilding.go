@@ -18,8 +18,8 @@ var (
 	colorRoadUnavailable = color.RGBA{255, 0, 0, 255}
 	colorRoadDefault     = color.RGBA{128, 128, 128, 255}
 
-	costPerMeter         = 100
-	laneWidth    float32 = 10
+	costPerUnit float32 = 100
+	laneWidth   float32 = 10
 )
 
 type Road struct {
@@ -93,6 +93,7 @@ type RoadBuildingSystem struct {
 	cities []roadBuildingEntity
 
 	roadHint       Road
+	roadCostHint   HUDText
 	selectedEntity roadBuildingEntity
 	hovering       bool
 	mouseTracker   MouseTracker
@@ -142,8 +143,12 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				r.selectedEntity.Color = colorDefault
 				e.RenderComponent.Drawable = common.Rectangle{BorderColor: colorSelectedBorder, BorderWidth: 5}
 			} else {
-
 				if r.selectedEntity.BasicEntity.ID() != e.BasicEntity.ID() {
+					// Check if we can afford it (and if so, pay for it)
+					if cashAmount < r.roadHint.Width*costPerUnit {
+						break // can't afford it
+					}
+					cashAmount -= r.roadHint.Width * costPerUnit
 
 					// Check if one exists already
 					var currentRoad *Road
@@ -174,6 +179,10 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 								sys.Add(&actualRoad.BasicEntity, &actualRoad.RenderComponent, &actualRoad.SpaceComponent)
 							case *CommuterSystem:
 								sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent, &actualRoad.SpaceComponent)
+							case *SpeedCameraBuildingSystem:
+								sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent, &actualRoad.SpaceComponent, &actualRoad.MouseComponent)
+							case *common.MouseSystem:
+								sys.Add(&actualRoad.BasicEntity, &actualRoad.MouseComponent, &actualRoad.SpaceComponent, &actualRoad.RenderComponent)
 							}
 						}
 
@@ -186,11 +195,14 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 						})
 						currentRoad.SpaceComponent.Height = laneWidth * float32(len(currentRoad.Lanes))
 					}
-
-					// Cleanup the roadHint
-					r.world.RemoveEntity(r.roadHint.BasicEntity)
-					r.roadHint = Road{}
 				}
+
+				// Cleanup the roadHint
+				r.world.RemoveEntity(r.roadHint.BasicEntity)
+				r.roadHint = Road{}
+
+				r.world.RemoveEntity(r.roadCostHint.BasicEntity)
+				r.roadCostHint = HUDText{}
 
 				// Deselect the City
 				e.RenderComponent.Color = colorDefault
@@ -233,16 +245,10 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			r.roadHint.RenderComponent = common.RenderComponent{
 				Drawable: common.Rectangle{},
 			}
-			r.roadHint.RenderComponent.SetZIndex(-1)
+			r.roadHint.RenderComponent.SetZIndex(1)
 			r.roadHint.RenderComponent.SetShader(common.LegacyShader)
 
 			roadHintNew = true
-		}
-
-		if hoveredId >= 0 {
-			r.roadHint.RenderComponent.Color = colorRoadAvailable
-		} else {
-			r.roadHint.RenderComponent.Color = colorRoadUnavailable
 		}
 
 		ab1 := target.AABB()
@@ -257,6 +263,12 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			math.Pow(centerA.X-centerB.X, 2) +
 				math.Pow(centerA.Y-centerB.Y, 2),
 		)
+
+		if hoveredId >= 0 && cashAmount >= roadLength*costPerUnit {
+			r.roadHint.RenderComponent.Color = colorRoadAvailable
+		} else {
+			r.roadHint.RenderComponent.Color = colorRoadUnavailable
+		}
 
 		// Using the Law of Cosines
 		// Solve for "alpha": (a2 means a squared)
@@ -276,11 +288,11 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			dirY = -1
 		}
 
-		newLanes := float32(1)
+		laneCount := float32(1)
 		if hoveredId >= 0 {
 			for _, road := range r.selectedEntity.Roads {
 				if road.To.ID() == r.cities[hoveredId].ID() {
-					newLanes += float32(len(road.Lanes))
+					laneCount += float32(len(road.Lanes))
 					break
 				}
 			}
@@ -292,7 +304,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				centerB.Y - roadWidth/2,
 			},
 			Width:    roadLength,
-			Height:   roadWidth * newLanes,
+			Height:   roadWidth * laneCount,
 			Rotation: rotation * dirY,
 		}
 
@@ -301,6 +313,53 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				switch sys := system.(type) {
 				case *common.RenderSystem:
 					sys.Add(&r.roadHint.BasicEntity, &r.roadHint.RenderComponent, &r.roadHint.SpaceComponent)
+				}
+			}
+		}
+
+		// Add money hint as well
+		var action string
+		if laneCount == 1 {
+			action = "Build"
+		} else {
+			action = "Expand"
+		}
+
+		if hoveredId < 0 || cashAmount < roadLength*costPerUnit {
+			action += " unavailable"
+		}
+
+		cost := costPerUnit * roadLength
+
+		var roadCostHintNew bool
+		if r.roadCostHint.ID() == 0 {
+			r.roadCostHint.BasicEntity = ecs.NewBasic()
+			roadCostHintNew = true
+		}
+
+		r.roadCostHint.SpaceComponent = common.SpaceComponent{
+			Position: engo.Point{engo.Input.Mouse.X, engo.Input.Mouse.Y + 20},
+			Width:    200, // TODO: set values?
+			Height:   16,
+		}
+
+		fnt := common.Font{
+			URL:  "fonts/Roboto-Regular.ttf",
+			FG:   color.RGBA{100, 0, 0, 200}, // dark red, but somewhat transparent
+			Size: 16,
+		}
+		fnt.CreatePreloaded()
+
+		r.roadCostHint.RenderComponent = common.RenderComponent{
+			Drawable: fnt.Render(fmt.Sprintf("%s ($ %.2f)", action, cost)),
+		}
+		r.roadCostHint.SetShader(common.HUDShader)
+
+		if roadCostHintNew {
+			for _, system := range r.world.Systems() {
+				switch sys := system.(type) {
+				case *common.RenderSystem:
+					sys.Add(&r.roadCostHint.BasicEntity, &r.roadCostHint.RenderComponent, &r.roadCostHint.SpaceComponent)
 				}
 			}
 		}

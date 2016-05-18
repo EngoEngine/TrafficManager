@@ -14,12 +14,13 @@ import (
 )
 
 var (
-	cashAmount float32
+	cashAmount  float32 = 100000 // 100k starting money
+	cashPerUnit float32 = 0.025
 )
 
 const (
 	SpeedOne          = 1
-	SpeedTwo          = 3
+	SpeedTwo          = 2
 	SpeedThree        = 15
 	MinTravelDistance = float32(24)
 )
@@ -44,12 +45,14 @@ type commuterEntityCommuter struct {
 type CommuterSystem struct {
 	world *ecs.World
 
-	gameSpeed float32
-	gameTime  time.Time
-	clock     HUDText
+	gameSpeed  float32
+	gameTime   time.Time
+	clock      HUDText
+	clockDrawn string
 
 	robotoFont common.Font
 	cash       HUDText
+	cashDrawn  float32
 
 	previousSecond int
 
@@ -119,7 +122,7 @@ func (c *CommuterSystem) addClock() {
 	c.cash.BasicEntity = ecs.NewBasic()
 	c.cash.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{engo.CanvasWidth() - 2*width - padding, padding},
-		Width:    width + 2*padding,
+		Width:    200,
 		Height:   height + 2*padding,
 	}
 	c.cash.RenderComponent = common.RenderComponent{
@@ -189,9 +192,17 @@ func (c *CommuterSystem) AddCommuter(basic *ecs.BasicEntity, comm *CommuterCompo
 func (c *CommuterSystem) Update(dt float32) {
 	// Update clock
 	c.gameTime = c.gameTime.Add(time.Duration(float32(time.Minute) * dt * c.gameSpeed))
-	c.clock.Drawable.Close()
-	c.clock.Drawable = c.robotoFont.Render(c.gameTime.Format("15:04"))
+	if timeString := c.gameTime.Format("15:04"); timeString != c.clockDrawn {
+		c.clock.Drawable.Close()
+		c.clock.Drawable = c.robotoFont.Render(timeString)
+	}
 	c.clock.Position.X = engo.CanvasWidth() - c.clock.Width
+	if cashAmount != c.cashDrawn {
+		c.cash.Drawable.Close()
+		c.cash.Drawable = c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount))
+		c.cashDrawn = cashAmount
+	}
+	c.cash.Position.X = engo.CanvasWidth() - c.clock.Width - c.cash.Width
 
 	engo.SetTitle(fmt.Sprintf("%f FPS", engo.Time.FPS()))
 
@@ -479,6 +490,7 @@ func (c *CommuterSystem) commuterArrival() {
 		if comm.DistanceTravelled > comm.Road.SpaceComponent.Width-15 {
 			// Done!
 			c.cities[comm.Road.To.ID()].Population++
+			cashAmount += comm.DistanceTravelled * cashPerUnit
 			c.world.RemoveEntity(*comm.BasicEntity)
 		}
 	}

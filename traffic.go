@@ -46,6 +46,8 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&systems.RoadBuildingSystem{})
 	world.AddSystem(&systems.HUDSystem{})
 	world.AddSystem(&systems.CommuterSystem{})
+	world.AddSystem(&systems.LawSystem{})
+	world.AddSystem(&systems.SpeedCameraBuildingSystem{})
 
 	fnt := common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
@@ -79,6 +81,7 @@ func main() {
 		Width:          800,
 		Height:         800,
 		StandardInputs: true,
+		MSAA:           4,
 	}
 	engo.Run(opts, &myScene{})
 }
