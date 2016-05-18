@@ -25,7 +25,11 @@ func (*myScene) Type() string { return "myGame" }
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
 	common.AudioSystemPreload()
-	err := engo.Files.LoadMany("textures/city.png", "fonts/Roboto-Regular.ttf", "sfx/crash.wav")
+	err := engo.Files.LoadMany(
+		"textures/city.png",
+		"fonts/Roboto-Regular.ttf",
+		"fonts/fontello.ttf",
+		"sfx/crash.wav")
 	if err != nil {
 		log.Println("[FATAL]", err)
 	}

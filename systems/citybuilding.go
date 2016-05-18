@@ -66,8 +66,6 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
 	if engo.Input.Button("build").JustPressed() {
-		fmt.Println("The gamer pressed F1")
-
 		city := City{BasicEntity: ecs.NewBasic()}
 
 		city.SpaceComponent = common.SpaceComponent{

@@ -80,6 +80,10 @@ const (
 	RoadBasic
 )
 
+const (
+	roadZIndex = -1
+)
+
 type roadBuildingEntity struct {
 	*ecs.BasicEntity
 	*CityComponent
@@ -164,7 +168,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 						actualRoad := Road{BasicEntity: ecs.NewBasic()}
 						actualRoad.SpaceComponent = r.roadHint.SpaceComponent
 						actualRoad.RenderComponent = common.RenderComponent{Drawable: common.Rectangle{BorderWidth: 0.5, BorderColor: color.Black}, Color: colorRoadDefault}
-						actualRoad.RenderComponent.SetZIndex(-1)
+						actualRoad.RenderComponent.SetZIndex(roadZIndex)
 						actualRoad.RenderComponent.SetShader(common.LegacyShader)
 						actualRoad.RoadComponent = RoadComponent{
 							Type: RoadBasic,
@@ -183,6 +187,8 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 								sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent, &actualRoad.SpaceComponent, &actualRoad.MouseComponent)
 							case *common.MouseSystem:
 								sys.Add(&actualRoad.BasicEntity, &actualRoad.MouseComponent, &actualRoad.SpaceComponent, &actualRoad.RenderComponent)
+							case *LawSystem:
+								sys.AddRoad(&actualRoad.BasicEntity, &actualRoad.RoadComponent)
 							}
 						}
 

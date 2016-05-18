@@ -1,12 +1,13 @@
 package systems
 
 import (
-	"engo.io/ecs"
-	"engo.io/engo"
-	"engo.io/engo/common"
 	"fmt"
 	"log"
 	"time"
+
+	"engo.io/ecs"
+	"engo.io/engo"
+	"engo.io/engo/common"
 )
 
 type LawType uint8
@@ -40,9 +41,15 @@ type LawComponent struct {
 }
 
 type RoadLocationComponent struct {
-	Road *Road
-	// Position is the amount of units measuerd from the `From` City.
+	// RoadID is the ID() of the BasicEntity of the Road
+	RoadID uint64
+	// Position is the amount of units measured from the `From` City.
 	Position float32
+}
+
+type lawEntityRoad struct {
+	*ecs.BasicEntity
+	*RoadComponent
 }
 
 type lawEntityCheckpoint struct {
@@ -56,18 +63,20 @@ type LawSystem struct {
 	world *ecs.World
 
 	cmtrSystem *CommuterSystem
-
-	laws map[LawType]float32
+	laws       map[LawType]float32
 
 	// lastFine is the moment in game-time where the commuter was last fined for a given law
 	lastFine map[LawType]map[uint64]time.Time
 
-	cp []lawEntityCheckpoint
+	roads map[uint64]lawEntityRoad
+	cp    []lawEntityCheckpoint
 }
 
 func (l *LawSystem) New(w *ecs.World) {
 	l.world = w
 	l.laws = make(map[LawType]float32)
+	l.roads = make(map[uint64]lawEntityRoad)
+	l.lastFine = make(map[LawType]map[uint64]time.Time)
 
 	// Find reference for CommuterSystem
 	for _, system := range l.world.Systems() {
@@ -82,6 +91,9 @@ func (l *LawSystem) New(w *ecs.World) {
 		return
 	}
 
+	// TODO; default laws?
+	l.laws[LawMaxSpeed] = 120
+
 	// Listening for LawMessages allows us to update the law
 	engo.Mailbox.Listen("LawMessage", func(m engo.Message) {
 		lm, ok := m.(LawMessage)
@@ -93,12 +105,27 @@ func (l *LawSystem) New(w *ecs.World) {
 	})
 }
 
-func (l *LawSystem) AddCheckpoint(basic *ecs.BasicEntity) {
-
+func (l *LawSystem) AddCheckpoint(basic *ecs.BasicEntity, law *LawComponent, roadloc *RoadLocationComponent) {
+	l.cp = append(l.cp, lawEntityCheckpoint{basic, law, roadloc})
 }
 
-func (l *LawSystem) Remove(ecs.BasicEntity) {
+func (l *LawSystem) AddRoad(basic *ecs.BasicEntity, road *RoadComponent) {
+	l.roads[basic.ID()] = lawEntityRoad{basic, road}
+}
 
+func (l *LawSystem) Remove(basic ecs.BasicEntity) {
+	del := -1
+	for index, e := range l.cp {
+		if e.BasicEntity.ID() == basic.ID() {
+			del = index
+			break
+		}
+	}
+	if del >= 0 {
+		l.cp = append(l.cp[:del], l.cp[del+1:]...)
+	}
+
+	delete(l.roads, basic.ID())
 }
 
 func (l *LawSystem) Update(dt float32) {
@@ -115,10 +142,10 @@ func (l *LawSystem) Update(dt float32) {
 }
 
 func (l *LawSystem) checkMaxSpeed(loc *RoadLocationComponent) {
-	for _, lane := range loc.Road.Lanes {
+	road := l.roads[loc.RoadID]
+	for _, lane := range road.Lanes {
 		for _, comm := range lane.Commuters {
 			if comm.Speed > l.laws[LawMaxSpeed] {
-				fmt.Println(comm.ID(), "is speeding")
 				l.fine(LawMaxSpeed, comm)
 			}
 		}
@@ -135,17 +162,26 @@ func (l *LawSystem) fine(t LawType, comm *Commuter) {
 	}
 
 	cmtr, ok := cmtrs[comm.ID()]
-	if !ok || l.cmtrSystem.gameTime.Sub(cmtr).Minutes() > 1 {
+	if !ok || l.cmtrSystem.gameTime.Sub(cmtr).Hours() > 1 {
 		cmtrs[comm.ID()] = l.cmtrSystem.gameTime
-		fmt.Println(comm.ID(), "has been fined")
+		fmt.Println("Commuter", comm.ID(), "has been fined")
 	}
 }
 
 type SpeedCheckpoint struct {
 	ecs.BasicEntity
 	LawComponent
+	RoadLocationComponent
 	common.RenderComponent
 	common.SpaceComponent
 	common.MouseComponent
 	common.AudioComponent
+
+	icon IconComponent
+}
+
+type IconComponent struct {
+	ecs.BasicEntity
+	common.RenderComponent
+	common.SpaceComponent
 }
