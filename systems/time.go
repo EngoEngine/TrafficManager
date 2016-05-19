@@ -94,6 +94,8 @@ func (t *TimeSystem) New(w *ecs.World) {
 			sys.SetClock(&t.clock.BasicEntity, &t.clock.TimeComponent, &t.clock.SpaceComponent)
 		case *LawSystem:
 			sys.SetClock(&t.clock.BasicEntity, &t.clock.TimeComponent)
+		case *MoneySystem:
+			sys.SetClock(&t.clock.BasicEntity, &t.clock.SpaceComponent)
 		}
 	}
 }
