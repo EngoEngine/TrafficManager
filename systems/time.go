@@ -23,6 +23,8 @@ const (
 	clockSize    float64 = 24
 	clockPadding float32 = 4
 	clockZIndex  float32 = 1000
+
+	robotoFontLocation = "fonts/Roboto-Regular.ttf"
 )
 
 type TimeComponent struct {
@@ -59,7 +61,7 @@ func (t *TimeSystem) New(w *ecs.World) {
 
 	// Load the preloaded font
 	t.robotoFont = common.Font{
-		URL:  "fonts/Roboto-Regular.ttf",
+		URL:  robotoFontLocation,
 		FG:   color.Black,
 		Size: clockSize,
 	}
@@ -90,6 +92,8 @@ func (t *TimeSystem) New(w *ecs.World) {
 			sys.Add(&t.clock.BasicEntity, &t.clock.RenderComponent, &t.clock.SpaceComponent)
 		case *CommuterSystem:
 			sys.SetClock(&t.clock.BasicEntity, &t.clock.TimeComponent, &t.clock.SpaceComponent)
+		case *LawSystem:
+			sys.SetClock(&t.clock.BasicEntity, &t.clock.TimeComponent)
 		}
 	}
 }
@@ -100,6 +104,7 @@ func (t *TimeSystem) Update(dt float32) {
 	if timeString := t.clock.Time.Format("15:04"); timeString != t.clockCache {
 		t.clock.Drawable.Close()
 		t.clock.Drawable = t.robotoFont.Render(timeString)
+		t.clock.Width = t.clock.Drawable.Width()
 		t.clockCache = timeString
 	}
 	t.clock.Position.X = engo.CanvasWidth() - t.clock.Width

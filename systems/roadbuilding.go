@@ -92,9 +92,15 @@ type roadBuildingEntity struct {
 	*common.MouseComponent
 }
 
+type roadBuildingMoney struct {
+	*ecs.BasicEntity
+	*MoneyComponent
+}
+
 type RoadBuildingSystem struct {
-	world          *ecs.World
-	cities         []roadBuildingEntity
+	world  *ecs.World
+	cities []roadBuildingEntity
+	money  roadBuildingMoney
 
 	roadHint       Road
 	roadCostHint   VisualEntity
@@ -114,10 +120,18 @@ func (r *RoadBuildingSystem) Remove(basic ecs.BasicEntity) {
 	if delete >= 0 {
 		r.cities = append(r.cities[:delete], r.cities[delete+1:]...)
 	}
+
+	if basic.ID() == r.money.ID() {
+		r.money = roadBuildingMoney{}
+	}
 }
 
 func (r *RoadBuildingSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent, space *common.SpaceComponent, render *common.RenderComponent, mouse *common.MouseComponent) {
 	r.cities = append(r.cities, roadBuildingEntity{basic, city, space, render, mouse})
+}
+
+func (r *RoadBuildingSystem) SetMoney(basic *ecs.BasicEntity, money *MoneyComponent) {
+	r.money = roadBuildingMoney{basic, money}
 }
 
 func (r *RoadBuildingSystem) New(w *ecs.World) {
@@ -149,10 +163,10 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			} else {
 				if r.selectedEntity.BasicEntity.ID() != e.BasicEntity.ID() {
 					// Check if we can afford it (and if so, pay for it)
-					if cashAmount < r.roadHint.Width*costPerUnit {
+					if r.money.Amount() < int64(r.roadHint.Width*costPerUnit) {
 						break // can't afford it
 					}
-					cashAmount -= r.roadHint.Width * costPerUnit
+					r.money.Add(int64(-r.roadHint.Width * costPerUnit))
 
 					// Check if one exists already
 					var currentRoad *Road
@@ -270,7 +284,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				math.Pow(centerA.Y-centerB.Y, 2),
 		)
 
-		if hoveredId >= 0 && cashAmount >= roadLength*costPerUnit {
+		if hoveredId >= 0 && r.money.Amount() >= int64(roadLength*costPerUnit) {
 			r.roadHint.RenderComponent.Color = colorRoadAvailable
 		} else {
 			r.roadHint.RenderComponent.Color = colorRoadUnavailable
@@ -331,7 +345,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			action = "Expand"
 		}
 
-		if hoveredId < 0 || cashAmount < roadLength*costPerUnit {
+		if hoveredId < 0 || r.money.Amount() < int64(roadLength*costPerUnit) {
 			action += " unavailable"
 		}
 

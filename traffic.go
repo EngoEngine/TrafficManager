@@ -53,6 +53,7 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&systems.LawSystem{})
 	world.AddSystem(&systems.SpeedCameraBuildingSystem{})
 	world.AddSystem(&systems.KeyboardZoomSystem{})
+	world.AddSystem(&systems.MoneySystem{})
 	world.AddSystem(&systems.TimeSystem{})
 
 	fnt := common.Font{

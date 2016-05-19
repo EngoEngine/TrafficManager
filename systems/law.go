@@ -2,7 +2,6 @@ package systems
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"engo.io/ecs"
@@ -58,16 +57,21 @@ type lawEntityCheckpoint struct {
 	*RoadLocationComponent
 }
 
+type lawEntityClock struct {
+	*ecs.BasicEntity
+	*TimeComponent
+}
+
 // The LawSsytem handles things such as speed cameras
 type LawSystem struct {
 	world *ecs.World
 
-	cmtrSystem *CommuterSystem
-	laws       map[LawType]float32
+	laws map[LawType]float32
 
 	// lastFine is the moment in game-time where the commuter was last fined for a given law
 	lastFine map[LawType]map[uint64]time.Time
 
+	clock lawEntityClock
 	roads map[uint64]lawEntityRoad
 	cp    []lawEntityCheckpoint
 }
@@ -77,19 +81,6 @@ func (l *LawSystem) New(w *ecs.World) {
 	l.laws = make(map[LawType]float32)
 	l.roads = make(map[uint64]lawEntityRoad)
 	l.lastFine = make(map[LawType]map[uint64]time.Time)
-
-	// Find reference for CommuterSystem
-	for _, system := range l.world.Systems() {
-		switch sys := system.(type) {
-		case *CommuterSystem:
-			l.cmtrSystem = sys
-		}
-	}
-
-	if l.cmtrSystem == nil {
-		log.Println("[FATAL] [LawSystem] `CommuterSystem` was not found. Did you add it?")
-		return
-	}
 
 	// TODO; default laws?
 	l.laws[LawMaxSpeed] = 120
@@ -113,6 +104,10 @@ func (l *LawSystem) AddRoad(basic *ecs.BasicEntity, road *RoadComponent) {
 	l.roads[basic.ID()] = lawEntityRoad{basic, road}
 }
 
+func (l *LawSystem) SetClock(basic *ecs.BasicEntity, clock *TimeComponent) {
+	l.clock = lawEntityClock{basic, clock}
+}
+
 func (l *LawSystem) Remove(basic ecs.BasicEntity) {
 	del := -1
 	for index, e := range l.cp {
@@ -126,6 +121,10 @@ func (l *LawSystem) Remove(basic ecs.BasicEntity) {
 	}
 
 	delete(l.roads, basic.ID())
+
+	if basic.ID() == l.clock.ID() {
+		l.clock = lawEntityClock{}
+	}
 }
 
 func (l *LawSystem) Update(dt float32) {
@@ -162,9 +161,8 @@ func (l *LawSystem) fine(t LawType, comm *Commuter) {
 	}
 
 	cmtr, ok := cmtrs[comm.ID()]
-	// TODO: l.cmtrSystem.clock.TimeComponent?! It should also use the clock component!
-	if !ok || l.cmtrSystem.clock.Time.Sub(cmtr).Hours() > 1 {
-		cmtrs[comm.ID()] = l.cmtrSystem.clock.Time
+	if !ok || l.clock.Time.Sub(cmtr).Hours() > 1 {
+		cmtrs[comm.ID()] = l.clock.Time
 		fmt.Println("Commuter", comm.ID(), "has been fined")
 	}
 }

@@ -12,8 +12,7 @@ import (
 )
 
 var (
-	cashAmount  float32 = 100000 // 100k starting money
-	cashPerUnit float32 = 0.025
+	cashPerUnit float32 = 0.05
 )
 
 const (
@@ -46,12 +45,6 @@ type commuterEntityClock struct {
 type CommuterSystem struct {
 	world *ecs.World
 
-	robotoFont common.Font
-	cash       VisualEntity
-	cashDrawn  float32
-
-	previousSecond int
-
 	clock     commuterEntityClock
 	cities    map[uint64]commuterEntityCity
 	roads     map[uint64]commuterEntityRoad
@@ -68,43 +61,6 @@ func (c *CommuterSystem) New(w *ecs.World) {
 	c.world = w
 	c.cities = make(map[uint64]commuterEntityCity)
 	c.roads = make(map[uint64]commuterEntityRoad)
-
-	// Load the preloaded font
-	c.robotoFont = common.Font{
-		URL:  "fonts/Roboto-Regular.ttf",
-		FG:   color.Black,
-		Size: clockSize,
-	}
-	if err := c.robotoFont.CreatePreloaded(); err != nil {
-		panic(err)
-	}
-
-	c.addClock()
-}
-
-func (c *CommuterSystem) addClock() {
-	c.cash.BasicEntity = ecs.NewBasic()
-	c.cash.RenderComponent = common.RenderComponent{
-		Drawable: c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount)),
-		Color:    color.Black,
-	}
-	c.cash.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{
-			X: engo.CanvasWidth() - 2*c.cash.Drawable.Width() - clockPadding,
-			Y: clockPadding,
-		},
-		Width:  c.cash.Drawable.Width(),
-		Height: c.cash.Drawable.Height() + 2*clockPadding,
-	}
-	c.cash.SetZIndex(clockZIndex)
-	c.cash.SetShader(common.HUDShader)
-
-	for _, system := range c.world.Systems() {
-		switch sys := system.(type) {
-		case *common.RenderSystem:
-			sys.Add(&c.cash.BasicEntity, &c.cash.RenderComponent, &c.cash.SpaceComponent)
-		}
-	}
 }
 
 func (c *CommuterSystem) Remove(basic ecs.BasicEntity) {
@@ -166,21 +122,10 @@ func (c *CommuterSystem) SetClock(basic *ecs.BasicEntity, clock *TimeComponent, 
 }
 
 func (c *CommuterSystem) Update(dt float32) {
-	// Update clock
-
-	if cashAmount != c.cashDrawn {
-		c.cash.Drawable.Close()
-		c.cash.Drawable = c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount))
-		c.cashDrawn = cashAmount
-	}
-	c.cash.Position.X = engo.CanvasWidth() - c.clock.Width - c.cash.Width
-
-	engo.SetTitle(fmt.Sprintf("%f FPS", engo.Time.FPS()))
-
 	// Do all of these things once per gameSpeed level
 	for i := float32(0); i < c.clock.Speed; i++ {
-		c.commuterSpeed(dt)
 		c.commuterDispatch()
+		c.commuterSpeed(dt)
 		c.commuterLaneSwitching()
 		c.commuterMove(dt)
 		c.commuterArrival()
@@ -450,9 +395,10 @@ func (c *CommuterSystem) commuterMove(dt float32) {
 func (c *CommuterSystem) commuterArrival() {
 	for _, comm := range c.commuters {
 		if comm.DistanceTravelled > comm.Road.SpaceComponent.Width-15 {
+			engo.Mailbox.Dispatch(CommuterArrivedMessage{comm.CommuterComponent})
+
 			// Done!
 			c.cities[comm.Road.To.ID()].Population++
-			cashAmount += comm.DistanceTravelled * cashPerUnit
 			c.world.RemoveEntity(*comm.BasicEntity)
 		}
 	}
@@ -531,3 +477,9 @@ func (c *CommuterSystem) newCommuter(road *Road, lane *Lane) {
 
 	lane.Commuters = append(lane.Commuters, cmtr)
 }
+
+type CommuterArrivedMessage struct {
+	Commuter *CommuterComponent
+}
+
+func (CommuterArrivedMessage) Type() string { return "CommuterArrivedMessage" }
