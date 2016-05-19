@@ -10,10 +10,12 @@ import (
 )
 
 const (
+	SpeedPause = 0
 	SpeedOne   = 1
 	SpeedTwo   = 2
 	SpeedThree = 15
 
+	SpeedPauseButton = "speed0"
 	SpeedOneButton   = "speed1"
 	SpeedTwoButton   = "speed2"
 	SpeedThreeButton = "speed3"
@@ -50,6 +52,7 @@ func (t *TimeSystem) New(w *ecs.World) {
 	t.clock.Speed = SpeedOne
 
 	// Register buttons
+	engo.Input.RegisterButton(SpeedPauseButton, engo.Grave, engo.P)
 	engo.Input.RegisterButton(SpeedOneButton, engo.NumOne, engo.One)
 	engo.Input.RegisterButton(SpeedTwoButton, engo.NumTwo, engo.Two)
 	engo.Input.RegisterButton(SpeedThreeButton, engo.NumThree, engo.Three)
@@ -102,7 +105,9 @@ func (t *TimeSystem) Update(dt float32) {
 	t.clock.Position.X = engo.CanvasWidth() - t.clock.Width
 
 	// Watch for speed changes
-	if engo.Input.Button(SpeedOneButton).Down() {
+	if engo.Input.Button(SpeedPauseButton).Down() {
+		t.clock.Speed = SpeedPause
+	} else if engo.Input.Button(SpeedOneButton).Down() {
 		t.clock.Speed = SpeedOne
 	} else if engo.Input.Button(SpeedTwoButton).Down() {
 		t.clock.Speed = SpeedTwo
