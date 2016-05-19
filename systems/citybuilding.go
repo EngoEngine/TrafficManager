@@ -3,7 +3,6 @@ package systems
 import (
 	"fmt"
 	"image/color"
-	"math/rand"
 
 	"engo.io/ecs"
 	"engo.io/engo"
@@ -82,8 +81,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 		city.RenderComponent.SetShader(common.LegacyShader)
 
 		city.CityComponent = CityComponent{
-			Name:       fmt.Sprintf("City %d", city.BasicEntity.ID()),
-			Population: rand.Intn(500),
+			Name: fmt.Sprintf("City %d (%d)", city.BasicEntity.ID(), city.Population),
 		}
 
 		for _, system := range cb.world.Systems() {

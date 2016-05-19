@@ -8,6 +8,16 @@ import (
 	"engo.io/engo/common"
 	"fmt"
 	"github.com/luxengine/math"
+	"time"
+)
+
+const (
+	commuterMaximum = 10000
+
+	roadZIndex = -1
+
+	costPerUnit float32 = 100
+	laneWidth   float32 = 10
 )
 
 var (
@@ -17,9 +27,6 @@ var (
 	colorRoadAvailable   = color.RGBA{0, 255, 0, 255}
 	colorRoadUnavailable = color.RGBA{255, 0, 0, 255}
 	colorRoadDefault     = color.RGBA{128, 128, 128, 255}
-
-	costPerUnit float32 = 100
-	laneWidth   float32 = 10
 )
 
 type Road struct {
@@ -31,7 +38,6 @@ type Road struct {
 }
 
 type RoadComponent struct {
-	Type     RoadType
 	From, To ecs.BasicEntity
 	Lanes    []*Lane
 
@@ -44,9 +50,21 @@ type Lane struct {
 }
 
 type LaneComponent struct {
-	Type      RoadType
 	Commuters []*Commuter
 	Index     int
+}
+
+func (l *LaneComponent) Remove(basic ecs.BasicEntity) {
+	index := -1
+	for i, comm := range l.Commuters {
+		if comm.ID() == basic.ID() {
+			index = i
+			break
+		}
+	}
+	if index >= 0 {
+		l.Commuters = append(l.Commuters[:index], l.Commuters[index+1:]...)
+	}
 }
 
 type Commuter struct {
@@ -58,6 +76,8 @@ type Commuter struct {
 
 type CommuterComponent struct {
 	DistanceTravelled float32
+	DepartureTimes    []time.Duration
+	LastDeparture     int
 
 	Speed             float32
 	PreferredSpeed    float32
@@ -66,23 +86,15 @@ type CommuterComponent struct {
 
 	SwitchingLane     bool
 	SwitchingProgress float32
-	Road              *Road
-	Lane              *Lane
-	NewLane           *Lane
+
+	CurrentCity commuterEntityCity
+	HomeCity    commuterEntityCity
+	Road        *Road
+	Lane        *Lane
+	NewLane     *Lane
 
 	// TODO: stuff like reaction time, amount of people,
 }
-
-type RoadType uint8
-
-const (
-	RoadNone RoadType = iota
-	RoadBasic
-)
-
-const (
-	roadZIndex = -1
-)
 
 type roadBuildingEntity struct {
 	*ecs.BasicEntity
@@ -185,7 +197,6 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 						actualRoad.RenderComponent.SetZIndex(roadZIndex)
 						actualRoad.RenderComponent.SetShader(common.LegacyShader)
 						actualRoad.RoadComponent = RoadComponent{
-							Type: RoadBasic,
 							From: *r.selectedEntity.BasicEntity,
 							To:   *e.BasicEntity,
 						}

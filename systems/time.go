@@ -13,7 +13,7 @@ const (
 	SpeedPause = 0
 	SpeedOne   = 1
 	SpeedTwo   = 2
-	SpeedThree = 15
+	SpeedThree = 30
 
 	SpeedPauseButton = "speed0"
 	SpeedOneButton   = "speed1"

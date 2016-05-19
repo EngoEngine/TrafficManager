@@ -124,8 +124,8 @@ func (h *HUDSystem) Update(dt float32) {
 	for _, city := range h.cities {
 		if city.MouseComponent.Hovered {
 			cityHovered = true
-			h.hudCityTitle.RenderComponent.Drawable = h.hudCityTitleFont.Render(fmt.Sprintf("%s (%d)", city.CityComponent.Name, city.CityComponent.Population))
-			break // hopefully no other cities will be hovered at the same time
+			h.hudCityTitle.RenderComponent.Drawable = h.hudCityTitleFont.Render(fmt.Sprintf("%s", city.CityComponent.Name)) // TODO: removed `, city.CityComponent.Population))`
+			break                                                                                                           // hopefully no other cities will be hovered at the same time
 		}
 	}
 

@@ -23,7 +23,6 @@ type MoneyComponent struct {
 	amount int64
 }
 
-// Add adds more money to the
 func (m *MoneyComponent) Add(a int64) {
 	atomic.AddInt64(&m.amount, a)
 }
