@@ -52,6 +52,7 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&systems.CommuterSystem{})
 	world.AddSystem(&systems.LawSystem{})
 	world.AddSystem(&systems.SpeedCameraBuildingSystem{})
+	world.AddSystem(&systems.KeyboardZoomSystem{})
 
 	fnt := common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
