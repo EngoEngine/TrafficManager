@@ -23,16 +23,16 @@ type speedCameraBuildingEntityRoad struct {
 }
 
 type SpeedCameraBuildingSystem struct {
-	world *ecs.World
+	world        *ecs.World
 
 	mouseTracker MouseTracker
 
-	building    bool
-	camHint     SpeedCheckpoint
-	camHintIcon common.Texture
-	camHintText HUDText
+	building     bool
+	camHint      SpeedCheckpoint
+	camHintIcon  common.Texture
+	camHintText  VisualEntity
 
-	roads []speedCameraBuildingEntityRoad
+	roads        []speedCameraBuildingEntityRoad
 }
 
 // Remove is called whenever an Entity is removed from the scene, and thus from this system

@@ -93,11 +93,11 @@ type roadBuildingEntity struct {
 }
 
 type RoadBuildingSystem struct {
-	world  *ecs.World
-	cities []roadBuildingEntity
+	world          *ecs.World
+	cities         []roadBuildingEntity
 
 	roadHint       Road
-	roadCostHint   HUDText
+	roadCostHint   VisualEntity
 	selectedEntity roadBuildingEntity
 	hovering       bool
 	mouseTracker   MouseTracker
@@ -208,7 +208,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				r.roadHint = Road{}
 
 				r.world.RemoveEntity(r.roadCostHint.BasicEntity)
-				r.roadCostHint = HUDText{}
+				r.roadCostHint = VisualEntity{}
 
 				// Deselect the City
 				e.RenderComponent.Color = colorDefault

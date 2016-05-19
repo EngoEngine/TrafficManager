@@ -10,23 +10,17 @@ import (
 	"fmt"
 )
 
-type HUD struct {
-	ecs.BasicEntity
-	common.RenderComponent
-	common.SpaceComponent
-}
-
-type HUDText struct {
-	ecs.BasicEntity
-	common.RenderComponent
-	common.SpaceComponent
-}
-
 var (
 	hudZ                = float32(1000)
 	hudHeight           = float32(200)
 	hudCityTitlePadding = float32(4)
 )
+
+type VisualEntity struct {
+	ecs.BasicEntity
+	common.RenderComponent
+	common.SpaceComponent
+}
 
 type hudEntityCity struct {
 	*ecs.BasicEntity
@@ -39,8 +33,8 @@ type HUDSystem struct {
 
 	cities []hudEntityCity
 
-	hudFrame         HUD
-	hudCityTitle     HUD
+	hudFrame         VisualEntity
+	hudCityTitle     VisualEntity
 	hudCityTitleFont common.Font
 }
 
@@ -60,7 +54,7 @@ func (h *HUDSystem) Remove(basic ecs.BasicEntity) {
 func (h *HUDSystem) New(w *ecs.World) {
 	h.world = w
 
-	h.hudFrame = HUD{BasicEntity: ecs.NewBasic()}
+	h.hudFrame = VisualEntity{BasicEntity: ecs.NewBasic()}
 	h.hudFrame.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{0, engo.CanvasHeight() - hudHeight},
 		Width:    engo.CanvasWidth(),
@@ -92,7 +86,7 @@ func (h *HUDSystem) New(w *ecs.World) {
 		return
 	}
 
-	h.hudCityTitle = HUD{BasicEntity: ecs.NewBasic()}
+	h.hudCityTitle = VisualEntity{BasicEntity: ecs.NewBasic()}
 	h.hudCityTitle.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{hudCityTitlePadding, engo.CanvasHeight() - hudHeight},
 		Width:    engo.CanvasWidth(),

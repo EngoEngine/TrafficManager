@@ -53,6 +53,7 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&systems.LawSystem{})
 	world.AddSystem(&systems.SpeedCameraBuildingSystem{})
 	world.AddSystem(&systems.KeyboardZoomSystem{})
+	world.AddSystem(&systems.TimeSystem{})
 
 	fnt := common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
@@ -65,7 +66,7 @@ func (*myScene) Setup(world *ecs.World) {
 		return
 	}
 
-	welcome := systems.HUDText{}
+	welcome := systems.VisualEntity{}
 	welcome.SpaceComponent.Width = engo.CanvasWidth()
 	welcome.SpaceComponent.Position = engo.Point{4, 4}
 	welcome.RenderComponent.Drawable = fnt.Render("Welcome! Press <B> to spawn cities. ")

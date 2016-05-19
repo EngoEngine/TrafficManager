@@ -162,8 +162,9 @@ func (l *LawSystem) fine(t LawType, comm *Commuter) {
 	}
 
 	cmtr, ok := cmtrs[comm.ID()]
-	if !ok || l.cmtrSystem.gameTime.Sub(cmtr).Hours() > 1 {
-		cmtrs[comm.ID()] = l.cmtrSystem.gameTime
+	// TODO: l.cmtrSystem.clock.TimeComponent?! It should also use the clock component!
+	if !ok || l.cmtrSystem.clock.Time.Sub(cmtr).Hours() > 1 {
+		cmtrs[comm.ID()] = l.cmtrSystem.clock.Time
 		fmt.Println("Commuter", comm.ID(), "has been fined")
 	}
 }

@@ -3,9 +3,7 @@ package systems
 import (
 	"fmt"
 	"image/color"
-	"log"
 	"math/rand"
-	"time"
 
 	"engo.io/ecs"
 	"engo.io/engo"
@@ -19,9 +17,6 @@ var (
 )
 
 const (
-	SpeedOne          = 1
-	SpeedTwo          = 2
-	SpeedThree        = 15
 	MinTravelDistance = float32(24)
 )
 
@@ -42,20 +37,22 @@ type commuterEntityCommuter struct {
 	*common.SpaceComponent
 }
 
+type commuterEntityClock struct {
+	*ecs.BasicEntity
+	*TimeComponent
+	*common.SpaceComponent
+}
+
 type CommuterSystem struct {
 	world *ecs.World
 
-	gameSpeed  float32
-	gameTime   time.Time
-	clock      HUDText
-	clockDrawn string
-
 	robotoFont common.Font
-	cash       HUDText
+	cash       VisualEntity
 	cashDrawn  float32
 
 	previousSecond int
 
+	clock     commuterEntityClock
 	cities    map[uint64]commuterEntityCity
 	roads     map[uint64]commuterEntityRoad
 	commuters []commuterEntityCommuter
@@ -69,67 +66,37 @@ type Crash struct {
 
 func (c *CommuterSystem) New(w *ecs.World) {
 	c.world = w
-	c.gameSpeed = SpeedOne
 	c.cities = make(map[uint64]commuterEntityCity)
 	c.roads = make(map[uint64]commuterEntityRoad)
-	c.gameTime = time.Now()
-	c.addClock()
 
-	engo.Input.RegisterButton("speed1", engo.NumOne, engo.One)
-	engo.Input.RegisterButton("speed2", engo.NumTwo, engo.Two)
-	engo.Input.RegisterButton("speed3", engo.NumThree, engo.Three)
-}
-
-func (c *CommuterSystem) addClock() {
-	var (
-		height  float32 = 24
-		width   float32 = height * 2.5
-		padding float32 = 4
-		zindex  float32 = 1000
-	)
-
+	// Load the preloaded font
 	c.robotoFont = common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
 		FG:   color.Black,
-		Size: 24,
+		Size: clockSize,
 	}
-	err := c.robotoFont.CreatePreloaded()
-	if err != nil {
-		log.Println(err)
-		return
+	if err := c.robotoFont.CreatePreloaded(); err != nil {
+		panic(err)
 	}
 
-	c.clock.BasicEntity = ecs.NewBasic()
-	c.clock.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{engo.CanvasWidth() - width - padding, padding},
-		Width:    width + 2*padding,
-		Height:   height + 2*padding,
-	}
-	c.clock.RenderComponent = common.RenderComponent{
-		Drawable: c.robotoFont.Render(c.gameTime.Format("15:04")),
-		Color:    color.Black,
-	}
-	c.clock.SetZIndex(zindex)
-	c.clock.SetShader(common.HUDShader)
+	c.addClock()
+}
 
-	for _, system := range c.world.Systems() {
-		switch sys := system.(type) {
-		case *common.RenderSystem:
-			sys.Add(&c.clock.BasicEntity, &c.clock.RenderComponent, &c.clock.SpaceComponent)
-		}
-	}
-
+func (c *CommuterSystem) addClock() {
 	c.cash.BasicEntity = ecs.NewBasic()
-	c.cash.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{engo.CanvasWidth() - 2*width - padding, padding},
-		Width:    200,
-		Height:   height + 2*padding,
-	}
 	c.cash.RenderComponent = common.RenderComponent{
 		Drawable: c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount)),
 		Color:    color.Black,
 	}
-	c.cash.SetZIndex(zindex)
+	c.cash.SpaceComponent = common.SpaceComponent{
+		Position: engo.Point{
+			X: engo.CanvasWidth() - 2*c.cash.Drawable.Width() - clockPadding,
+			Y: clockPadding,
+		},
+		Width:  c.cash.Drawable.Width(),
+		Height: c.cash.Drawable.Height() + 2*clockPadding,
+	}
+	c.cash.SetZIndex(clockZIndex)
 	c.cash.SetShader(common.HUDShader)
 
 	for _, system := range c.world.Systems() {
@@ -175,6 +142,10 @@ func (c *CommuterSystem) Remove(basic ecs.BasicEntity) {
 	if delete >= 0 {
 		c.commuters = append(c.commuters[:delete], c.commuters[delete+1:]...)
 	}
+
+	if basic.ID() == c.clock.ID() {
+		c.clock = commuterEntityClock{}
+	}
 }
 
 func (c *CommuterSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent) {
@@ -189,14 +160,14 @@ func (c *CommuterSystem) AddCommuter(basic *ecs.BasicEntity, comm *CommuterCompo
 	c.commuters = append(c.commuters, commuterEntityCommuter{basic, comm, space})
 }
 
+// SetClock sets the current clock to the given one
+func (c *CommuterSystem) SetClock(basic *ecs.BasicEntity, clock *TimeComponent, space *common.SpaceComponent) {
+	c.clock = commuterEntityClock{basic, clock, space}
+}
+
 func (c *CommuterSystem) Update(dt float32) {
 	// Update clock
-	c.gameTime = c.gameTime.Add(time.Duration(float32(time.Minute) * dt * c.gameSpeed))
-	if timeString := c.gameTime.Format("15:04"); timeString != c.clockDrawn {
-		c.clock.Drawable.Close()
-		c.clock.Drawable = c.robotoFont.Render(timeString)
-	}
-	c.clock.Position.X = engo.CanvasWidth() - c.clock.Width
+
 	if cashAmount != c.cashDrawn {
 		c.cash.Drawable.Close()
 		c.cash.Drawable = c.robotoFont.Render(fmt.Sprintf("$ %.2f", cashAmount))
@@ -206,17 +177,8 @@ func (c *CommuterSystem) Update(dt float32) {
 
 	engo.SetTitle(fmt.Sprintf("%f FPS", engo.Time.FPS()))
 
-	// Watch for speed changes
-	if engo.Input.Button("speed1").Down() {
-		c.gameSpeed = SpeedOne
-	} else if engo.Input.Button("speed2").Down() {
-		c.gameSpeed = SpeedTwo
-	} else if engo.Input.Button("speed3").Down() {
-		c.gameSpeed = SpeedThree
-	}
-
 	// Do all of these things once per gameSpeed level
-	for i := float32(0); i < c.gameSpeed; i++ {
+	for i := float32(0); i < c.clock.Speed; i++ {
 		c.commuterSpeed(dt)
 		c.commuterDispatch()
 		c.commuterLaneSwitching()
@@ -499,7 +461,7 @@ func (c *CommuterSystem) commuterArrival() {
 func (c *CommuterSystem) commuterEstimates() map[uint64]int {
 	rushHours := []float32{8.50, 17.50} // so that's 8:30 am and 5:30 pm
 
-	hr := float32(c.gameTime.Hour()) + float32(c.gameTime.Second())/60
+	hr := float32(c.clock.Time.Hour()) + float32(c.clock.Time.Second())/60
 
 	diff := float32(math.MaxFloat32)
 	for _, rushHr := range rushHours {
