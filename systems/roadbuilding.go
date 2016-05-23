@@ -112,7 +112,7 @@ type RoadBuildingSystem struct {
 	money  roadBuildingMoney
 
 	roadHint       Road
-	roadCostHint   ui.Graphic
+	roadCostHint   ui.Label
 	selectedEntity roadBuildingEntity
 	hovering       bool
 	mouseTracker   MouseTracker
@@ -148,6 +148,18 @@ func (r *RoadBuildingSystem) New(w *ecs.World) {
 
 	r.mouseTracker.BasicEntity = ecs.NewBasic()
 	r.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
+
+	fnt := &common.Font{
+		URL:  "fonts/Roboto-Regular.ttf",
+		FG:   color.RGBA{100, 0, 0, 200}, // dark red, but somewhat transparent
+		Size: 16,
+	}
+	err := fnt.CreatePreloaded()
+	if err != nil {
+		panic(err)
+	}
+
+	r.roadCostHint.Font = fnt
 
 	for _, system := range w.Systems() {
 		switch sys := system.(type) {
@@ -230,7 +242,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				r.roadHint = Road{}
 
 				r.world.RemoveEntity(r.roadCostHint.BasicEntity)
-				r.roadCostHint = ui.Graphic{}
+				r.roadCostHint = ui.Label{Font: r.roadCostHint.Font}
 
 				// Deselect the City
 				e.RenderComponent.Color = e.Category.Color()
@@ -377,16 +389,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			Height:   16,
 		}
 
-		fnt := common.Font{
-			URL:  "fonts/Roboto-Regular.ttf",
-			FG:   color.RGBA{100, 0, 0, 200}, // dark red, but somewhat transparent
-			Size: 16,
-		}
-		fnt.CreatePreloaded()
-
-		r.roadCostHint.RenderComponent = common.RenderComponent{
-			Drawable: fnt.Render(fmt.Sprintf("%s ($ %.2f)", action, cost)),
-		}
+		r.roadCostHint.SetText(fmt.Sprintf("%s ($ %.0f)", action, cost))
 		r.roadCostHint.SetShader(common.HUDShader)
 
 		if roadCostHintNew {

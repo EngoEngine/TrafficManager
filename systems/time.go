@@ -7,6 +7,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	"github.com/EngoEngine/TrafficDefense/systems/ui"
 )
 
 const (
@@ -33,17 +34,12 @@ type TimeComponent struct {
 }
 
 type clock struct {
-	ecs.BasicEntity
 	TimeComponent
-	common.RenderComponent
-	common.SpaceComponent
+	ui.Label
 }
 
 type TimeSystem struct {
-	clock      clock
-	clockCache string
-
-	robotoFont common.Font
+	clock clock
 }
 
 func (*TimeSystem) Remove(ecs.BasicEntity) {}
@@ -60,21 +56,21 @@ func (t *TimeSystem) New(w *ecs.World) {
 	engo.Input.RegisterButton(SpeedThreeButton, engo.NumThree, engo.Three)
 
 	// Load the preloaded font
-	t.robotoFont = common.Font{
+	fnt := &common.Font{
 		URL:  robotoFontLocation,
 		FG:   color.Black,
 		Size: clockSize,
 	}
-	if err := t.robotoFont.CreatePreloaded(); err != nil {
+	if err := fnt.CreatePreloaded(); err != nil {
 		panic(err)
 	}
 
 	// Create graphical representation of the clock
 	t.clock.BasicEntity = ecs.NewBasic()
-	t.clock.RenderComponent = common.RenderComponent{
-		Drawable: t.robotoFont.Render(t.clock.Time.Format("15:04")),
-		Color:    color.Black,
-	}
+	t.clock.RenderComponent.Color = color.Black
+	t.clock.Font = fnt
+	t.clock.SetText(t.clock.Time.Format("15:04"))
+
 	t.clock.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{
 			X: engo.CanvasWidth() - t.clock.RenderComponent.Drawable.Width() - clockPadding,
@@ -103,12 +99,7 @@ func (t *TimeSystem) New(w *ecs.World) {
 func (t *TimeSystem) Update(dt float32) {
 	// Update the visual clock
 	t.clock.Time = t.clock.Time.Add(time.Duration(float32(time.Minute) * dt * t.clock.Speed))
-	if timeString := t.clock.Time.Format("15:04"); timeString != t.clockCache {
-		t.clock.Drawable.Close()
-		t.clock.Drawable = t.robotoFont.Render(timeString)
-		t.clock.Width = t.clock.Drawable.Width()
-		t.clockCache = timeString
-	}
+	t.clock.SetText(t.clock.Time.Format("15:04"))
 	t.clock.Position.X = engo.CanvasWidth() - t.clock.Width
 
 	// Watch for speed changes
