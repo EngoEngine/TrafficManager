@@ -1,0 +1,25 @@
+cities:
+  - x: 100
+    y: 100
+  - x: 300
+    y: 100
+  - x: 200
+    y: 300
+
+waves:
+  - - name: "car"
+      amount: 50
+    - name: "truck"
+      amount: 5
+  - - name: "car"
+      amount: 75
+    - name: "truck"
+      amount: 15
+  - - name: "car"
+      amount: 150
+    - name: "truck"
+      amount: 15
+  - - name: "car"
+      amount: 75
+    - name: "truck"
+      amount: 35

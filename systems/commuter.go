@@ -142,7 +142,7 @@ func (c *CommuterSystem) Update(dt float32) {
 		c.commuterArrival()
 	}
 
-	engo.SetTitle(fmt.Sprintf("%d", c.commuters.Amount))
+	engo.SetTitle(fmt.Sprintf("%f", engo.Time.FPS()))
 }
 
 func (c *CommuterSystem) commuterSpeed(dt float32) {
@@ -335,7 +335,7 @@ func (c *CommuterSystem) commuterLaneSwitching() {
 		comm.SpaceComponent.Position.X -= dx
 		comm.SpaceComponent.Position.Y += dy
 
-		if math.Abs(comm.SwitchingProgress) == laneWidth {
+		if math.Abs(comm.SwitchingProgress) >= laneWidth {
 			// Done switching, remove it from lane
 			comm.Lane.Remove(comm.BasicEntity)
 			comm.Lane = comm.NewLane

@@ -2,11 +2,11 @@ package main
 
 import (
 	"image/color"
-	"log"
 
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	"fmt"
 	"github.com/EngoEngine/TrafficManager/systems"
 )
 
@@ -15,6 +15,8 @@ const (
 	EdgeScrollSpeed     = KeyboardScrollSpeed
 	EdgeWidth           = 20
 	ZoomSpeed           = -0.125
+
+	WorldPadding = 50
 )
 
 type myScene struct{}
@@ -29,9 +31,11 @@ func (*myScene) Preload() {
 		"textures/city.png",
 		"fonts/Roboto-Regular.ttf",
 		"fonts/fontello.ttf",
-		"sfx/crash.wav")
+		"sfx/crash.wav",
+		"logic/1.level.yaml",
+	)
 	if err != nil {
-		log.Println("[FATAL]", err)
+		panic(err)
 	}
 }
 
@@ -63,8 +67,7 @@ func (*myScene) Setup(world *ecs.World) {
 	}
 	err := fnt.CreatePreloaded()
 	if err != nil {
-		log.Println(err)
-		return
+		panic(err)
 	}
 
 	welcome := systems.VisualEntity{}
@@ -74,12 +77,60 @@ func (*myScene) Setup(world *ecs.World) {
 
 	welcome.RenderComponent.SetShader(common.HUDShader)
 
+	// Load this specific level
+	lvlRes, err := engo.Files.Resource("logic/1.level.yaml")
+	if err != nil {
+		panic(err)
+	}
+
+	lvl := lvlRes.(systems.LevelResource)
+	var min, max engo.Point
+	for _, city := range lvl.Level.Cities {
+		if min.X == 0 || city.X < min.X {
+			min.X = city.X
+		}
+		if min.Y == 0 || city.Y < min.Y {
+			min.Y = city.Y
+		}
+		if city.X > max.X {
+			max.X = city.X
+		}
+		if city.Y > max.Y {
+			max.Y = city.Y
+		}
+	}
+
+	common.CameraBounds = engo.AABB{min, max}
+	bg := Background{BasicEntity: ecs.BasicEntity{}}
+	bg.SpaceComponent = common.SpaceComponent{
+		Position: engo.Point{min.X - WorldPadding, min.Y - WorldPadding},
+		Width:    max.X - min.X + systems.CityWidth + 2*WorldPadding,
+		Height:   max.Y - min.Y + systems.CityHeight + 2*WorldPadding,
+	}
+	bg.RenderComponent = common.RenderComponent{
+		Drawable: common.Rectangle{},
+		Color:    color.RGBA{200, 200, 200, 255},
+	}
+	bg.SetZIndex(-10000)
+	bg.SetShader(common.LegacyShader)
+
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
 			sys.Add(&welcome.BasicEntity, &welcome.RenderComponent, &welcome.SpaceComponent)
+			sys.Add(&bg.BasicEntity, &bg.RenderComponent, &bg.SpaceComponent)
+		case *systems.CityBuildingSystem:
+			for _, city := range lvl.Level.Cities {
+				sys.BuildCity(city.X, city.Y)
+			}
 		}
 	}
+}
+
+type Background struct {
+	ecs.BasicEntity
+	common.RenderComponent
+	common.SpaceComponent
 }
 
 func main() {

@@ -1,0 +1,19 @@
+vehicles:
+  - name: "car"
+    length: 30
+    minspeed: 80
+    maxspeed: 160
+    cost: 1
+    reward: 100
+  - name: "cab"
+    length: 30
+    minspeed: 110
+    maxspeed: 130
+    cost: 2
+    reward: 200
+  - name: "truck"
+    length: 100
+    minspeed: 70
+    maxspeed: 90
+    cost: 5
+    reward: 500

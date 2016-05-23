@@ -11,6 +11,9 @@ import (
 
 const (
 	cityZIndex = 100
+
+	CityWidth  float32 = 30
+	CityHeight float32 = 30
 )
 
 type MouseTracker struct {
@@ -65,38 +68,42 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
 	if engo.Input.Button("build").JustPressed() {
-		city := City{BasicEntity: ecs.NewBasic()}
+		cb.BuildCity(cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY)
+	}
+}
 
-		city.SpaceComponent = common.SpaceComponent{
-			Position: engo.Point{cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY},
-			Width:    30,
-			Height:   30,
-		}
+func (cb *CityBuildingSystem) BuildCity(x, y float32) {
+	city := City{BasicEntity: ecs.NewBasic()}
 
-		city.RenderComponent = common.RenderComponent{
-			Drawable: common.Rectangle{},
-			Color:    color.Black,
-		}
-		city.RenderComponent.SetZIndex(cityZIndex)
-		city.RenderComponent.SetShader(common.LegacyShader)
+	city.SpaceComponent = common.SpaceComponent{
+		Position: engo.Point{x, y},
+		Width:    CityWidth,
+		Height:   CityHeight,
+	}
 
-		city.CityComponent = CityComponent{
-			Name: fmt.Sprintf("City %d (%d)", city.BasicEntity.ID(), city.Population),
-		}
+	city.RenderComponent = common.RenderComponent{
+		Drawable: common.Rectangle{},
+		Color:    color.Black,
+	}
+	city.RenderComponent.SetZIndex(cityZIndex)
+	city.RenderComponent.SetShader(common.LegacyShader)
 
-		for _, system := range cb.world.Systems() {
-			switch sys := system.(type) {
-			case *common.RenderSystem:
-				sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
-			case *common.MouseSystem:
-				sys.Add(&city.BasicEntity, &city.MouseComponent, &city.SpaceComponent, &city.RenderComponent)
-			case *RoadBuildingSystem:
-				sys.AddCity(&city.BasicEntity, &city.CityComponent, &city.SpaceComponent, &city.RenderComponent, &city.MouseComponent)
-			case *HUDSystem:
-				sys.AddCity(&city.BasicEntity, &city.CityComponent, &city.MouseComponent)
-			case *CommuterSystem:
-				sys.AddCity(&city.BasicEntity, &city.CityComponent)
-			}
+	city.CityComponent = CityComponent{
+		Name: fmt.Sprintf("City %d (%d)", city.BasicEntity.ID(), city.Population),
+	}
+
+	for _, system := range cb.world.Systems() {
+		switch sys := system.(type) {
+		case *common.RenderSystem:
+			sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
+		case *common.MouseSystem:
+			sys.Add(&city.BasicEntity, &city.MouseComponent, &city.SpaceComponent, &city.RenderComponent)
+		case *RoadBuildingSystem:
+			sys.AddCity(&city.BasicEntity, &city.CityComponent, &city.SpaceComponent, &city.RenderComponent, &city.MouseComponent)
+		case *HUDSystem:
+			sys.AddCity(&city.BasicEntity, &city.CityComponent, &city.MouseComponent)
+		case *CommuterSystem:
+			sys.AddCity(&city.BasicEntity, &city.CityComponent)
 		}
 	}
 }
