@@ -1,13 +1,13 @@
 package systems
 
 import (
+	"fmt"
 	"image/color"
-	"log"
 
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"fmt"
+	"github.com/EngoEngine/TrafficDefense/systems/ui"
 )
 
 var (
@@ -15,12 +15,6 @@ var (
 	hudHeight           = float32(200)
 	hudCityTitlePadding = float32(4)
 )
-
-type VisualEntity struct {
-	ecs.BasicEntity
-	common.RenderComponent
-	common.SpaceComponent
-}
 
 type hudEntityCity struct {
 	*ecs.BasicEntity
@@ -33,9 +27,8 @@ type HUDSystem struct {
 
 	cities []hudEntityCity
 
-	hudFrame         VisualEntity
-	hudCityTitle     VisualEntity
-	hudCityTitleFont common.Font
+	hudFrame     ui.Graphic
+	hudCityTitle ui.Label
 }
 
 func (h *HUDSystem) Remove(basic ecs.BasicEntity) {
@@ -54,7 +47,7 @@ func (h *HUDSystem) Remove(basic ecs.BasicEntity) {
 func (h *HUDSystem) New(w *ecs.World) {
 	h.world = w
 
-	h.hudFrame = VisualEntity{BasicEntity: ecs.NewBasic()}
+	h.hudFrame = ui.Graphic{BasicEntity: ecs.NewBasic()}
 	h.hudFrame.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{0, engo.CanvasHeight() - hudHeight},
 		Width:    engo.CanvasWidth(),
@@ -75,28 +68,24 @@ func (h *HUDSystem) New(w *ecs.World) {
 		}
 	}
 
-	h.hudCityTitleFont = common.Font{
+	fnt := &common.Font{
 		URL:  "fonts/Roboto-Regular.ttf",
 		FG:   color.Black,
 		Size: 24,
 	}
-	err := h.hudCityTitleFont.CreatePreloaded()
+	err := fnt.CreatePreloaded()
 	if err != nil {
-		log.Println(err)
-		return
+		panic(err)
 	}
 
-	h.hudCityTitle = VisualEntity{BasicEntity: ecs.NewBasic()}
+	h.hudCityTitle = ui.Label{BasicEntity: ecs.NewBasic()}
 	h.hudCityTitle.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{hudCityTitlePadding, engo.CanvasHeight() - hudHeight},
 		Width:    engo.CanvasWidth(),
 		Height:   hudHeight,
 	}
 
-	h.hudCityTitle.RenderComponent = common.RenderComponent{
-		Drawable: h.hudCityTitleFont.Render("."),
-		//Color:    color.RGBA{200, 200, 200, 255},
-	}
+	h.hudCityTitle.Font = fnt
 	h.hudCityTitle.RenderComponent.SetZIndex(hudZ + 1)
 	h.hudCityTitle.RenderComponent.SetShader(common.HUDShader)
 
@@ -124,8 +113,8 @@ func (h *HUDSystem) Update(dt float32) {
 	for _, city := range h.cities {
 		if city.MouseComponent.Hovered {
 			cityHovered = true
-			h.hudCityTitle.RenderComponent.Drawable = h.hudCityTitleFont.Render(fmt.Sprintf("%s", city.CityComponent.Name)) // TODO: removed `, city.CityComponent.Population))`
-			break                                                                                                           // hopefully no other cities will be hovered at the same time
+			h.hudCityTitle.SetText(fmt.Sprintf("City %q", city.CityComponent.Category))
+			break
 		}
 	}
 

@@ -8,6 +8,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	"github.com/EngoEngine/TrafficDefense/systems/ui"
 	"github.com/luxengine/math"
 )
 
@@ -23,16 +24,16 @@ type speedCameraBuildingEntityRoad struct {
 }
 
 type SpeedCameraBuildingSystem struct {
-	world        *ecs.World
+	world *ecs.World
 
 	mouseTracker MouseTracker
 
-	building     bool
-	camHint      SpeedCheckpoint
-	camHintIcon  common.Texture
-	camHintText  VisualEntity
+	building    bool
+	camHint     SpeedCheckpoint
+	camHintIcon common.Texture
+	camHintText ui.Graphic
 
-	roads        []speedCameraBuildingEntityRoad
+	roads []speedCameraBuildingEntityRoad
 }
 
 // Remove is called whenever an Entity is removed from the scene, and thus from this system

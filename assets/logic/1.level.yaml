@@ -1,25 +1,44 @@
 cities:
   - x: 100
     y: 100
-  - x: 300
+    category: 0
+  - x: 1500
     y: 100
-  - x: 200
-    y: 300
+    category: 1
+  - x: 1000
+    y: 1500
+    category: 0
 
 waves:
-  - - name: "car"
-      amount: 50
-    - name: "truck"
-      amount: 5
-  - - name: "car"
-      amount: 75
-    - name: "truck"
-      amount: 15
-  - - name: "car"
-      amount: 150
-    - name: "truck"
-      amount: 15
-  - - name: "car"
-      amount: 75
-    - name: "truck"
-      amount: 35
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 50
+        to: 0
+      - name: "truck"
+        amount: 5
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 75
+        to: 0
+      - name: "truck"
+        amount: 15
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 150
+        to: 0
+      - name: "truck"
+        amount: 15
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 75
+        to: 0
+      - name: "truck"
+        amount: 35
+        to: 0

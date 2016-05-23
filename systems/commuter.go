@@ -12,19 +12,10 @@ import (
 	"github.com/luxengine/math"
 )
 
-var (
-	cashPerUnit float32 = 0.05
-)
-
 const (
 	MinTravelDistance = float32(24)
 	commuterZIndex    = 50
 )
-
-type CommuterPool struct {
-	Commuters [commuterMaximum]Commuter
-	Amount    int
-}
 
 type commuterEntityCity struct {
 	*ecs.BasicEntity
@@ -52,10 +43,12 @@ type commuterEntityClock struct {
 type CommuterSystem struct {
 	world *ecs.World
 
+	Vehicles map[string]Vehicle
+
 	clock     commuterEntityClock
 	cities    map[uint64]commuterEntityCity
 	roads     map[uint64]commuterEntityRoad
-	commuters CommuterPool
+	commuters []*Commuter
 
 	// TODO: this may be another system?
 	lastHour int
@@ -79,9 +72,10 @@ func (c *CommuterSystem) Remove(basic ecs.BasicEntity) {
 	delete(c.roads, basic.ID())
 
 	var commuter *CommuterComponent
-	for i := 0; i < c.commuters.Amount; i++ {
-		if c.commuters.Commuters[i].BasicEntity.ID() == basic.ID() {
-			commuter = &c.commuters.Commuters[i].CommuterComponent
+	for index, cmtr := range c.commuters {
+		if cmtr.ID() == basic.ID() {
+			commuter = &c.commuters[index].CommuterComponent
+			c.commuters = append(c.commuters[:index], c.commuters[index+1:]...)
 			break
 		}
 	}
@@ -114,11 +108,6 @@ func (c *CommuterSystem) Remove(basic ecs.BasicEntity) {
 func (c *CommuterSystem) AddCity(basic *ecs.BasicEntity, city *CityComponent) {
 	cec := commuterEntityCity{basic, city}
 	c.cities[basic.ID()] = cec
-
-	city.Population = 300 + rand.Intn(500)
-	for i := 0; i < city.Population; i++ {
-		c.newCommuter(cec)
-	}
 }
 
 func (c *CommuterSystem) AddRoad(basic *ecs.BasicEntity, road *RoadComponent, space *common.SpaceComponent) {
@@ -131,8 +120,6 @@ func (c *CommuterSystem) SetClock(basic *ecs.BasicEntity, clock *TimeComponent, 
 }
 
 func (c *CommuterSystem) Update(dt float32) {
-	c.commuterGrowth()
-
 	// Do all of these things once per gameSpeed level
 	for i := float32(0); i < c.clock.Speed; i++ {
 		c.commuterDispatch()
@@ -253,71 +240,47 @@ func (c *CommuterSystem) canSwitch(road commuterEntityRoad, lane *Lane, comm *Co
 	return result[0], result[1]
 }
 
-// commuterGrowth grows each City by one Commuter, each ingame hour
-func (c *CommuterSystem) commuterGrowth() {
-	if hr := c.clock.Time.Hour(); hr != c.lastHour {
-		c.lastHour = hr
+func (c *CommuterSystem) commuterDispatch() {
+	for _, city := range c.cities {
+		for i, q := range city.Queue {
+			if q.Amount == 0 {
+				continue
+			}
 
-		for _, city := range c.cities {
-			c.newCommuter(city)
+			// TODO: process q.Name
+
+			var dispatched bool
+		Outer:
+			for _, road := range c.roads {
+				if c.cities[road.To.ID()].Category == q.To && !dispatched {
+					// We can dispatch! :)
+					for _, lane := range road.Lanes {
+						if lane.CanDispatch() {
+							dispatched = true
+							c.dispatch(c.newCommuter(city, c.Vehicles[q.Name]), road, lane)
+							break Outer
+						}
+					}
+				}
+			}
+
+			if dispatched {
+				city.Queue[i].Amount--
+			}
 		}
 	}
 }
 
-func (c *CommuterSystem) commuterDispatch() {
-	today := time.Date(c.clock.Time.Year(), c.clock.Time.Month(), c.clock.Time.Day(), 0, 0, 0, 0, c.clock.Time.Location())
-
-	for i := 0; i < c.commuters.Amount; i++ {
-		comm := &c.commuters.Commuters[i]
-		if comm.Road != nil {
-			continue // already dispatched
-		}
-
-		departIndex := -1
-		for ti, t := range comm.DepartureTimes {
-			if ti == comm.LastDeparture {
-				continue // we already had this one
-			}
-
-			if diff := t.Hours() - c.clock.Time.Sub(today).Hours(); diff < 1 && diff > -1 { // 1 hour window to leave
-				departIndex = ti
-				break
-			}
-		}
-
-		if departIndex >= 0 {
-			var road *Road
-			var lane *Lane
-
-			for _, r := range comm.CurrentCity.Roads {
-				if comm.CurrentCity.ID() != comm.HomeCity.ID() {
-					if r.To.ID() != comm.HomeCity.ID() {
-						continue // we only want to go home
-					}
-				}
-
-				for _, l := range r.Lanes {
-					curCmtrs := len(l.Commuters)
-					if curCmtrs == 0 || l.Commuters[curCmtrs-1].DistanceTravelled > MinTravelDistance {
-						road = r
-						lane = l
-						break
-					}
-				}
-			}
-
-			if road != nil && lane != nil {
-				comm.LastDeparture = departIndex
-				c.dispatch(comm, road, lane)
-			}
-		}
+func (l *Lane) CanDispatch() bool {
+	if len(l.Commuters) == 0 {
+		return true
 	}
+
+	return l.Commuters[len(l.Commuters)-1].DistanceTravelled-l.Commuters[len(l.Commuters)-1].Width >= MinTravelDistance
 }
 
 func (c *CommuterSystem) commuterLaneSwitching() {
-	for i := 0; i < c.commuters.Amount; i++ {
-		comm := &c.commuters.Commuters[i]
-
+	for _, comm := range c.commuters {
 		if !comm.SwitchingLane {
 			continue // with other commuters
 		}
@@ -367,6 +330,7 @@ func (c *CommuterSystem) commuterMove(dt float32) {
 				if commIndex > 0 {
 					if comm.DistanceTravelled > (lane.Commuters[commIndex-1].DistanceTravelled - lane.Commuters[commIndex-1].Width) {
 						// Crash!
+
 						crash := Crash{
 							BasicEntity: ecs.NewBasic(),
 							AudioComponent: common.AudioComponent{
@@ -386,10 +350,11 @@ func (c *CommuterSystem) commuterMove(dt float32) {
 
 						fmt.Println("Crash", comm.ID(), lane.Commuters[commIndex-1].BasicEntity.ID())
 
+						// Actual removal happens outside this loop
 						crashed = append(crashed, comm.BasicEntity)
 						crashed = append(crashed, lane.Commuters[commIndex-1].BasicEntity)
 
-						// Now let's remove the two cars
+						// TODO; apply vehicle "Cost"
 					}
 				}
 
@@ -413,71 +378,67 @@ func (c *CommuterSystem) commuterMove(dt float32) {
 }
 
 func (c *CommuterSystem) commuterArrival() {
-	for i := 0; i < c.commuters.Amount; i++ {
-		comm := &c.commuters.Commuters[i]
+	for _, road := range c.roads {
+		for _, lane := range road.Lanes {
+			for i := len(lane.Commuters) - 1; i >= 0; i-- {
+				comm := lane.Commuters[i]
 
-		if comm.Road == nil {
-			continue // apparently not driving
-		}
+				if comm.DistanceTravelled > comm.Road.SpaceComponent.Width-15 {
+					engo.Mailbox.Dispatch(CommuterArrivedMessage{&comm.CommuterComponent})
 
-		if comm.DistanceTravelled > comm.Road.SpaceComponent.Width-15 {
-			engo.Mailbox.Dispatch(CommuterArrivedMessage{&comm.CommuterComponent})
+					comm.Lane.Remove(comm.BasicEntity)
+					if comm.NewLane != nil {
+						comm.NewLane.Remove(comm.BasicEntity)
+					}
 
-			comm.Lane.Remove(comm.BasicEntity)
-			if comm.NewLane != nil {
-				comm.NewLane.Remove(comm.BasicEntity)
-			}
+					comm.Road = commuterEntityRoad{}
+					comm.Lane = nil
+					comm.NewLane = nil
+					comm.SwitchingLane = false
+					comm.DistanceTravelled = 0
 
-			comm.CurrentCity = c.cities[comm.Road.To.ID()]
-			comm.Road = nil
-			comm.Lane = nil
-			comm.NewLane = nil
-			comm.SwitchingLane = false
-			comm.DistanceTravelled = 0
-
-			for _, system := range c.world.Systems() {
-				switch sys := system.(type) {
-				case *common.RenderSystem:
-					sys.Remove(comm.BasicEntity)
+					for _, system := range c.world.Systems() {
+						switch sys := system.(type) {
+						case *common.RenderSystem:
+							sys.Remove(comm.BasicEntity)
+						}
+					}
 				}
 			}
 		}
 	}
 }
 
-func (c *CommuterSystem) newCommuter(city commuterEntityCity) *Commuter {
-	cmtr := &c.commuters.Commuters[c.commuters.Amount]
-	cmtr.BasicEntity = ecs.NewBasic()
+func (c *CommuterSystem) newCommuter(city commuterEntityCity, v Vehicle) *Commuter {
+	cmtr := &Commuter{BasicEntity: ecs.NewBasic()}
 	cmtr.CommuterComponent = CommuterComponent{
-		PreferredSpeed: float32(rand.Intn(60) + 80), // 60 being minimum speed, 80 being the variation,
+		PreferredSpeed: v.Minspeed + rand.Float32()*(v.Maxspeed-v.Minspeed), // 60 being minimum speed, 80 being the variation,
 		DepartureTimes: []time.Duration{
 			time.Hour*6 + time.Duration(rand.Intn(180))*time.Minute,
 			time.Hour*16 + time.Duration(rand.Intn(240))*time.Minute,
 		},
-		CurrentCity:       city,
-		HomeCity:          city,
-		Speed:             40 + float32(rand.Intn(20)), // coming from city
-		AccelerationSpeed: 60 + float32(rand.Intn(40)),
-		BrakeSpeed:        160 + float32(rand.Intn(160)), // for this car specifically
+		Speed:             50, // coming from city
+		AccelerationSpeed: v.Acceleration,
+		BrakeSpeed:        v.Brakes,
 	}
 	cmtr.SpaceComponent = common.SpaceComponent{
-		Width:  12,
+		Width:  v.Length,
 		Height: 6,
 	}
 	cmtr.RenderComponent = common.RenderComponent{
 		Drawable: common.Rectangle{BorderWidth: 0.5, BorderColor: color.RGBA{128, 128, 128, 128}},
 		Color:    color.RGBA{uint8(rand.Intn(255)), uint8(rand.Intn(255)), uint8(rand.Intn(255)), 255},
 	}
+	cmtr.Vehicle = v
 
 	cmtr.SetZIndex(commuterZIndex)
 	cmtr.SetShader(common.LegacyShader)
+	c.commuters = append(c.commuters, cmtr)
 
-	c.commuters.Amount++
 	return cmtr
 }
 
-func (c *CommuterSystem) dispatch(cmtr *Commuter, road *Road, lane *Lane) {
-	cmtr.CurrentCity = commuterEntityCity{}
+func (c *CommuterSystem) dispatch(cmtr *Commuter, road commuterEntityRoad, lane *Lane) {
 	cmtr.Road = road
 	cmtr.Lane = lane
 	cmtr.Position = road.SpaceComponent.Position

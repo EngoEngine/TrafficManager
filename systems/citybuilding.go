@@ -1,7 +1,6 @@
 package systems
 
 import (
-	"fmt"
 	"image/color"
 
 	"engo.io/ecs"
@@ -21,6 +20,40 @@ type MouseTracker struct {
 	common.MouseComponent
 }
 
+type CityCategory uint8
+
+const (
+	CategoryRed CityCategory = iota
+	CategoryGreen
+	CategoryBlue
+)
+
+func (c CityCategory) String() string {
+	switch c {
+	case CategoryRed:
+		return "Red"
+	case CategoryGreen:
+		return "Green"
+	case CategoryBlue:
+		return "Blue"
+	default:
+		panic("CityCategory not found for String() method")
+	}
+}
+
+func (c CityCategory) Color() color.Color {
+	switch c {
+	case CategoryRed:
+		return color.RGBA{255, 0, 0, 255}
+	case CategoryGreen:
+		return color.RGBA{0, 255, 0, 255}
+	case CategoryBlue:
+		return color.RGBA{0, 0, 255, 255}
+	default:
+		panic("CityCategory not found for String() method")
+	}
+}
+
 type City struct {
 	ecs.BasicEntity
 	common.RenderComponent
@@ -30,69 +63,50 @@ type City struct {
 }
 
 type CityComponent struct {
-	Name       string
-	Population int
+	Category CityCategory
 
-	Roads []*Road
+	Queue      []WaveComponent
+	RedCount   int
+	GreenCount int
+	BlueCount  int
 
+	Roads     []*Road
 	isHovered bool
 }
 
-type CityBuildingSystem struct {
-	world *ecs.World
-
-	mouseTracker MouseTracker
-}
-
-// Remove is called whenever an Entity is removed from the scene, and thus from this system
-func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
-
-// New is the initialisation of the System
-func (cb *CityBuildingSystem) New(w *ecs.World) {
-	cb.world = w
-
-	engo.Input.RegisterButton("build", engo.F1, engo.B, engo.ArrowDown)
-
-	cb.mouseTracker.BasicEntity = ecs.NewBasic()
-	cb.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
-
-	for _, system := range w.Systems() {
-		switch sys := system.(type) {
-		case *common.MouseSystem:
-			sys.Add(&cb.mouseTracker.BasicEntity, &cb.mouseTracker.MouseComponent, nil, nil)
+func (c *CityComponent) Enqueue(wave []WaveComponent) {
+	c.Queue = wave
+	for _, elem := range wave {
+		switch elem.To {
+		case CategoryRed:
+			c.RedCount++
+		case CategoryGreen:
+			c.GreenCount++
+		case CategoryBlue:
+			c.BlueCount++
 		}
 	}
 }
 
-// Update is ran every frame, with `dt` being the time
-// in seconds since the last frame
-func (cb *CityBuildingSystem) Update(dt float32) {
-	if engo.Input.Button("build").JustPressed() {
-		cb.BuildCity(cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY)
-	}
-}
-
-func (cb *CityBuildingSystem) BuildCity(x, y float32) {
-	city := City{BasicEntity: ecs.NewBasic()}
-
-	city.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{x, y},
-		Width:    CityWidth,
-		Height:   CityHeight,
+func BuildCity(x, y float32, cat CityCategory, w *ecs.World) *City {
+	city := &City{
+		BasicEntity:   ecs.NewBasic(),
+		CityComponent: CityComponent{Category: cat},
+		SpaceComponent: common.SpaceComponent{
+			Position: engo.Point{x, y},
+			Width:    CityWidth,
+			Height:   CityHeight,
+		},
+		RenderComponent: common.RenderComponent{
+			Drawable: common.Rectangle{},
+			Color:    cat.Color(),
+		},
 	}
 
-	city.RenderComponent = common.RenderComponent{
-		Drawable: common.Rectangle{},
-		Color:    color.Black,
-	}
 	city.RenderComponent.SetZIndex(cityZIndex)
 	city.RenderComponent.SetShader(common.LegacyShader)
 
-	city.CityComponent = CityComponent{
-		Name: fmt.Sprintf("City %d (%d)", city.BasicEntity.ID(), city.Population),
-	}
-
-	for _, system := range cb.world.Systems() {
+	for _, system := range w.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
 			sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
@@ -104,6 +118,10 @@ func (cb *CityBuildingSystem) BuildCity(x, y float32) {
 			sys.AddCity(&city.BasicEntity, &city.CityComponent, &city.MouseComponent)
 		case *CommuterSystem:
 			sys.AddCity(&city.BasicEntity, &city.CityComponent)
+		case *WaveSystem:
+			sys.AddCity(&city.BasicEntity, &city.CityComponent)
 		}
 	}
+
+	return city
 }

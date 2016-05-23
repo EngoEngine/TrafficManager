@@ -6,8 +6,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"fmt"
-	"github.com/EngoEngine/TrafficManager/systems"
+	"github.com/EngoEngine/TrafficDefense/systems"
 )
 
 const (
@@ -31,12 +30,15 @@ func (*myScene) Preload() {
 		"textures/city.png",
 		"fonts/Roboto-Regular.ttf",
 		"fonts/fontello.ttf",
-		"sfx/crash.wav",
 		"logic/1.level.yaml",
+		"logic/vehicles.yaml",
 	)
 	if err != nil {
 		panic(err)
 	}
+
+	// These are allowed to fail
+	engo.Files.LoadMany("sfx/crash.wav")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -50,7 +52,6 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
-	world.AddSystem(&systems.CityBuildingSystem{})
 	world.AddSystem(&systems.RoadBuildingSystem{})
 	world.AddSystem(&systems.HUDSystem{})
 	world.AddSystem(&systems.CommuterSystem{})
@@ -59,23 +60,7 @@ func (*myScene) Setup(world *ecs.World) {
 	world.AddSystem(&systems.KeyboardZoomSystem{})
 	world.AddSystem(&systems.MoneySystem{})
 	world.AddSystem(&systems.TimeSystem{})
-
-	fnt := common.Font{
-		URL:  "fonts/Roboto-Regular.ttf",
-		FG:   color.Black,
-		Size: 24,
-	}
-	err := fnt.CreatePreloaded()
-	if err != nil {
-		panic(err)
-	}
-
-	welcome := systems.VisualEntity{}
-	welcome.SpaceComponent.Width = engo.CanvasWidth()
-	welcome.SpaceComponent.Position = engo.Point{4, 4}
-	welcome.RenderComponent.Drawable = fnt.Render("Welcome! Press <B> to spawn cities. ")
-
-	welcome.RenderComponent.SetShader(common.HUDShader)
+	world.AddSystem(&systems.WaveSystem{})
 
 	// Load this specific level
 	lvlRes, err := engo.Files.Resource("logic/1.level.yaml")
@@ -101,6 +86,24 @@ func (*myScene) Setup(world *ecs.World) {
 	}
 
 	common.CameraBounds = engo.AABB{min, max}
+	cities := make([]*systems.City, len(lvl.Level.Cities))
+
+	for i, city := range lvl.Level.Cities {
+		cities[i] = systems.BuildCity(city.X, city.Y, city.Category, world)
+	}
+
+	// Load vehicles
+	vehRes, err := engo.Files.Resource("logic/vehicles.yaml")
+	if err != nil {
+		panic(err)
+	}
+	veh := vehRes.(systems.VehicleResource)
+
+	vehMap := make(map[string]systems.Vehicle)
+	for _, vehicle := range veh.Vehicles.Vehicles {
+		vehMap[vehicle.Name] = vehicle
+	}
+
 	bg := Background{BasicEntity: ecs.BasicEntity{}}
 	bg.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{min.X - WorldPadding, min.Y - WorldPadding},
@@ -117,12 +120,11 @@ func (*myScene) Setup(world *ecs.World) {
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
 		case *common.RenderSystem:
-			sys.Add(&welcome.BasicEntity, &welcome.RenderComponent, &welcome.SpaceComponent)
 			sys.Add(&bg.BasicEntity, &bg.RenderComponent, &bg.SpaceComponent)
-		case *systems.CityBuildingSystem:
-			for _, city := range lvl.Level.Cities {
-				sys.BuildCity(city.X, city.Y)
-			}
+		case *systems.CommuterSystem:
+			sys.Vehicles = vehMap
+		case *systems.WaveSystem:
+			sys.SetWaves(lvl.Level.Waves)
 		}
 	}
 }
@@ -135,7 +137,7 @@ type Background struct {
 
 func main() {
 	opts := engo.RunOptions{
-		Title:          "TrafficManager",
+		Title:          "TrafficDefense",
 		Width:          800,
 		Height:         800,
 		StandardInputs: true,

@@ -1,19 +1,18 @@
 package systems
 
 import (
+	"fmt"
 	"image/color"
+	"time"
 
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"fmt"
+	"github.com/EngoEngine/TrafficDefense/systems/ui"
 	"github.com/luxengine/math"
-	"time"
 )
 
 const (
-	commuterMaximum = 10000
-
 	roadZIndex = -1
 
 	costPerUnit float32 = 100
@@ -21,9 +20,8 @@ const (
 )
 
 var (
-	colorDefault         = color.Black
-	colorHover           = color.RGBA{100, 100, 255, 255}
-	colorSelectedBorder  = colorHover
+	alphaHover           = uint8(100)
+	colorSelectedBorder  = color.RGBA{100, 100, 100, 255}
 	colorRoadAvailable   = color.RGBA{0, 255, 0, 255}
 	colorRoadUnavailable = color.RGBA{255, 0, 0, 255}
 	colorRoadDefault     = color.RGBA{128, 128, 128, 255}
@@ -79,6 +77,7 @@ type CommuterComponent struct {
 	DepartureTimes    []time.Duration
 	LastDeparture     int
 
+	Vehicle           Vehicle
 	Speed             float32
 	PreferredSpeed    float32
 	BrakeSpeed        float32
@@ -87,11 +86,9 @@ type CommuterComponent struct {
 	SwitchingLane     bool
 	SwitchingProgress float32
 
-	CurrentCity commuterEntityCity
-	HomeCity    commuterEntityCity
-	Road        *Road
-	Lane        *Lane
-	NewLane     *Lane
+	Road    commuterEntityRoad
+	Lane    *Lane
+	NewLane *Lane
 
 	// TODO: stuff like reaction time, amount of people,
 }
@@ -115,7 +112,7 @@ type RoadBuildingSystem struct {
 	money  roadBuildingMoney
 
 	roadHint       Road
-	roadCostHint   VisualEntity
+	roadCostHint   ui.Graphic
 	selectedEntity roadBuildingEntity
 	hovering       bool
 	mouseTracker   MouseTracker
@@ -170,7 +167,7 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 			if r.selectedEntity.BasicEntity == nil {
 				// Select the City
 				r.selectedEntity = e
-				r.selectedEntity.Color = colorDefault
+				r.selectedEntity.Color = r.selectedEntity.Category.Color()
 				e.RenderComponent.Drawable = common.Rectangle{BorderColor: colorSelectedBorder, BorderWidth: 5}
 			} else {
 				if r.selectedEntity.BasicEntity.ID() != e.BasicEntity.ID() {
@@ -233,10 +230,10 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 				r.roadHint = Road{}
 
 				r.world.RemoveEntity(r.roadCostHint.BasicEntity)
-				r.roadCostHint = VisualEntity{}
+				r.roadCostHint = ui.Graphic{}
 
 				// Deselect the City
-				e.RenderComponent.Color = colorDefault
+				e.RenderComponent.Color = e.Category.Color()
 				e.RenderComponent.Drawable = common.Rectangle{}
 				r.selectedEntity.RenderComponent.Drawable = common.Rectangle{} // so no border
 				r.selectedEntity = roadBuildingEntity{}
@@ -247,14 +244,20 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 		if r.selectedEntity.BasicEntity == nil || r.selectedEntity.BasicEntity.ID() != e.BasicEntity.ID() {
 			if e.MouseComponent.Hovered {
 				// If it's hovered, we should make it visual
-				e.RenderComponent.Color = colorHover
+				rc, rg, rb, _ := e.RenderComponent.Color.RGBA()
+				e.RenderComponent.Color = color.RGBA{
+					uint8(rc >> 2),
+					uint8(rg >> 2),
+					uint8(rb >> 2),
+					alphaHover}
+
 				e.isHovered = true
 				hovered = true
 
 				hoveredId = index
 			} else if e.isHovered {
 				// Then reset to base values
-				e.RenderComponent.Color = colorDefault
+				e.RenderComponent.Color = e.Category.Color()
 			}
 		}
 	}
