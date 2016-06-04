@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 
 	"engo.io/engo"
 	"gopkg.in/yaml.v2"
-	"strings"
 )
 
 type Vehicles struct {

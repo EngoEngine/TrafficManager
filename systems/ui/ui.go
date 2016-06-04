@@ -23,12 +23,13 @@ func (l *Label) SetText(s string) bool {
 		return false
 	}
 
-	if l.RenderComponent.Drawable != nil {
-		l.RenderComponent.Drawable.Close()
+	if l.RenderComponent.Drawable == nil {
+		l.RenderComponent.Drawable = common.Text{Font: l.Font}
 	}
 
-	l.RenderComponent.Drawable = l.Font.Render(s)
-	l.cache = s
+	fnt := l.RenderComponent.Drawable.(common.Text)
+	fnt.Text = s
+
 	return true
 }
 

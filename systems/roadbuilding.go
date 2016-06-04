@@ -8,7 +8,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"github.com/EngoEngine/TrafficDefense/systems/ui"
+	"github.com/EngoEngine/TrafficManager/systems/ui"
 	"github.com/luxengine/math"
 )
 
@@ -377,22 +377,18 @@ func (r *RoadBuildingSystem) Update(dt float32) {
 
 		cost := costPerUnit * roadLength
 
-		var roadCostHintNew bool
-		if r.roadCostHint.ID() == 0 {
-			r.roadCostHint.BasicEntity = ecs.NewBasic()
-			roadCostHintNew = true
-		}
+		r.roadCostHint.SetText(fmt.Sprintf("%s ($ %.0f)", action, math.Floor(cost/100)*100))
 
 		r.roadCostHint.SpaceComponent = common.SpaceComponent{
 			Position: engo.Point{engo.Input.Mouse.X, engo.Input.Mouse.Y + 20},
-			Width:    200, // TODO: set values?
-			Height:   16,
+			Width:    r.roadCostHint.Drawable.Width() * r.roadCostHint.RenderComponent.Scale.X,
+			Height:   r.roadCostHint.Drawable.Height() * r.roadCostHint.RenderComponent.Scale.Y,
 		}
 
-		r.roadCostHint.SetText(fmt.Sprintf("%s ($ %.0f)", action, cost))
 		r.roadCostHint.SetShader(common.HUDShader)
 
-		if roadCostHintNew {
+		if r.roadCostHint.ID() == 0 {
+			r.roadCostHint.BasicEntity = ecs.NewBasic()
 			for _, system := range r.world.Systems() {
 				switch sys := system.(type) {
 				case *common.RenderSystem:

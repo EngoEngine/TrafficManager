@@ -6,7 +6,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-	"github.com/EngoEngine/TrafficDefense/systems"
+	"github.com/EngoEngine/TrafficManager/systems"
 )
 
 const (
@@ -26,7 +26,7 @@ func (*myScene) Type() string { return "myGame" }
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
 	common.AudioSystemPreload()
-	err := engo.Files.LoadMany(
+	err := engo.Files.Load(
 		"textures/city.png",
 		"fonts/Roboto-Regular.ttf",
 		"fonts/fontello.ttf",
@@ -38,7 +38,7 @@ func (*myScene) Preload() {
 	}
 
 	// These are allowed to fail
-	engo.Files.LoadMany("sfx/crash.wav")
+	engo.Files.Load("sfx/crash.wav")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
