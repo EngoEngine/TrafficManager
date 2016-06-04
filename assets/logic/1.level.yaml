@@ -1,0 +1,44 @@
+cities:
+  - x: 100
+    y: 100
+    category: 0
+  - x: 1500
+    y: 100
+    category: 1
+  - x: 1000
+    y: 1500
+    category: 0
+
+waves:
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 50
+        to: 0
+      - name: "truck"
+        amount: 5
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 75
+        to: 0
+      - name: "truck"
+        amount: 15
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 150
+        to: 0
+      - name: "truck"
+        amount: 15
+        to: 0
+  - - from: 1
+      vehicles:
+      - name: "car"
+        amount: 75
+        to: 0
+      - name: "truck"
+        amount: 35
+        to: 0
