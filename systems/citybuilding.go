@@ -1,18 +1,15 @@
 package systems
 
 import (
-	"fmt"
-
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
 )
 
-// ---------------------------------
-// Vars
+const cityTextureLocation = "textures/city.png"
 
 // CityAssets are the assets for the system
-var CityAssets = []string{"textures/city.png"}
+var CityAssets = [...]string{cityTextureLocation}
 
 type CityMouseTracker struct {
 	ecs.BasicEntity
@@ -30,9 +27,6 @@ type CityBuildingSystem struct {
 
 	mouseTracker CityMouseTracker
 }
-
-// ---------------------------------
-// Struct functions
 
 // New is the initialisation of the System
 func (cb *CityBuildingSystem) New(w *ecs.World) {
@@ -53,9 +47,9 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
-	keyQ := engo.Button{[]engo.Key{engo.Q}, "Q"}
+	buildKey := engo.Button{[]engo.Key{engo.Q}, "build"}
 
-	if keyQ.JustPressed() {
+	if buildKey.JustPressed() {
 		fmt.Println("The gamer pressed Q")
 
 		// Create a new city
@@ -74,18 +68,13 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 // Remove is called whenever an Entity is removed from the scene, and thus from this system
 func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
 
-// ---------------------------------
-// Private functions
-
 // createCity creates a city
 func createCity(cb *CityBuildingSystem) (city City) {
-	// Set textures
-	texture, err := common.PreloadedSpriteSingle(CityAssets[0])
+	texture, err := common.PreloadedSpriteSingle(cityTextureLocation)
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
 
-	// Set entities
 	city = City{BasicEntity: ecs.NewBasic()}
 	city.RenderComponent = common.RenderComponent{
 		Drawable: texture,
