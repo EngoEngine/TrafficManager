@@ -38,6 +38,8 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 	cb.mouseTracker.BasicEntity = ecs.NewBasic()
 	cb.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
 
+	engo.Input.RegisterButton("build", engo.Q)
+
 	for _, system := range w.Systems() {
 		switch sys := system.(type) {
 		case *common.MouseSystem:
@@ -49,9 +51,7 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
-	engo.Input.RegisterButton("build", engo.Q)
 	buildKey := engo.Input.Button("build")
-
 	if buildKey.JustPressed() {
 		fmt.Println("The gamer pressed Q")
 
