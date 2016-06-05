@@ -4,12 +4,14 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+
+	"fmt"
 )
 
 const cityTextureLocation = "textures/city.png"
 
 // CityAssets are the assets for the system
-var CityAssets = [...]string{cityTextureLocation}
+var CityAssets = []string{cityTextureLocation}
 
 type CityMouseTracker struct {
 	ecs.BasicEntity
@@ -47,7 +49,8 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
-	buildKey := engo.Button{[]engo.Key{engo.Q}, "build"}
+	engo.Input.RegisterButton("build", engo.Q)
+	buildKey := engo.Input.Button("build")
 
 	if buildKey.JustPressed() {
 		fmt.Println("The gamer pressed Q")
