@@ -1,61 +1,67 @@
 package main
 
 import (
-	"engo.io/engo"
 	"engo.io/ecs"
-	"image/color"
-)
+	"engo.io/engo"
+	"engo.io/engo/common"
 
-type myScene struct {}
+	"image/color"
+	"log"
+)
 
 type City struct {
 	ecs.BasicEntity
-	engo.RenderComponent
-	engo.SpaceComponent
+	common.RenderComponent
+	common.SpaceComponent
 }
+
+type myScene struct{}
 
 // Type uniquely defines your game type
 func (*myScene) Type() string { return "myGame" }
 
-// Preload is called before loading any assets from the disk, to allow you to register / queue them
+// Preload is called before loading any assets from the disk,
+// to allow you to register / queue them
 func (*myScene) Preload() {
-	engo.Files.Add("assets/textures/city.png")
+	engo.Files.Load("textures/city.png")
 }
 
-// Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
+// Setup is called before the main loop starts. It allows you
+// to add entities and systems to your Scene.
+
 func (*myScene) Setup(world *ecs.World) {
-	engo.SetBackground(color.White)
-
-	world.AddSystem(&engo.RenderSystem{})
-
+	world.AddSystem(new(common.RenderSystem))
 	city := City{BasicEntity: ecs.NewBasic()}
-
-	city.SpaceComponent = engo.SpaceComponent{
+	city.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{10, 10},
-		Width: 303,
-		Height: 641,
+		Width:    303,
+		Height:   641,
 	}
 
-	texture := engo.Files.Image("city.png")
-	city.RenderComponent = engo.NewRenderComponent(
-		texture,
-		engo.Point{1, 1},
-		"city texture",
-	)
+	texture, err := common.PreloadedSpriteSingle("textures/city.png")
+	if err != nil {
+		log.Println("Unable to load texture: " + err.Error())
+	}
+
+	city.RenderComponent = common.RenderComponent{
+		Drawable: texture,
+		Scale:    engo.Point{1, 1},
+	}
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
-		case *engo.RenderSystem:
+		case *common.RenderSystem:
 			sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
 		}
 	}
+	common.SetBackground(color.White)
 }
 
 func main() {
 	opts := engo.RunOptions{
-		Title: "Hello World",
-		Width: 400,
+		Title:  "Hello World",
+		Width:  400,
 		Height: 400,
 	}
-	engo.Run(opts, &myScene{})
+	engo.Run(opts, new(myScene))
 }
