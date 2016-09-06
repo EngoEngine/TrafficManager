@@ -2,20 +2,22 @@ package systems
 
 import (
 	"fmt"
+	"log"
 
 	"engo.io/ecs"
 	"engo.io/engo"
+	"engo.io/engo/common"
 )
 
 type MouseTracker struct {
 	ecs.BasicEntity
-	engo.MouseComponent
+	common.MouseComponent
 }
 
 type City struct {
 	ecs.BasicEntity
-	engo.RenderComponent
-	engo.SpaceComponent
+	common.RenderComponent
+	common.SpaceComponent
 }
 
 type CityBuildingSystem struct {
@@ -33,11 +35,11 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 	fmt.Println("CityBuildingSystem was added to the Scene")
 
 	cb.mouseTracker.BasicEntity = ecs.NewBasic()
-	cb.mouseTracker.MouseComponent = engo.MouseComponent{Track: true}
+	cb.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
 
 	for _, system := range w.Systems() {
 		switch sys := system.(type) {
-		case *engo.MouseSystem:
+		case *common.MouseSystem:
 			sys.Add(&cb.mouseTracker.BasicEntity, &cb.mouseTracker.MouseComponent, nil, nil)
 		}
 	}
@@ -46,27 +48,30 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
-	if engo.Keys.Get(engo.F1).JustPressed() {
+	if engo.Input.Button("AddCity").JustPressed() {
 		fmt.Println("The gamer pressed F1")
 
 		city := City{BasicEntity: ecs.NewBasic()}
 
-		city.SpaceComponent = engo.SpaceComponent{
+		city.SpaceComponent = common.SpaceComponent{
 			Position: engo.Point{cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY},
 			Width:    30,
 			Height:   64,
 		}
 
-		texture := engo.Files.Image("city.png")
-		city.RenderComponent = engo.NewRenderComponent(
-			texture,
-			engo.Point{0.1, 0.1},
-			"city texture",
-		)
+		texture, err := common.PreloadedSpriteSingle("textures/city.png")
+		if err != nil {
+			log.Println("Unable to load texture: " + err.Error())
+		}
+
+		city.RenderComponent = common.RenderComponent{
+			Drawable: texture,
+			Scale:    engo.Point{0.1, 0.1},
+		}
 
 		for _, system := range cb.world.Systems() {
 			switch sys := system.(type) {
-			case *engo.RenderSystem:
+			case *common.RenderSystem:
 				sys.Add(&city.BasicEntity, &city.RenderComponent, &city.SpaceComponent)
 			}
 		}
