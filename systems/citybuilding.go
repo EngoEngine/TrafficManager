@@ -73,7 +73,7 @@ func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
 
 // createCity creates a city
 func createCity(cb *CityBuildingSystem) (city City) {
-	texture, err := common.PreloadedSpriteSingle(cityTextureLocation)
+	texture, err := common.LoadedSprite(cityTextureLocation)
 	if err != nil {
 		panic(err)
 	}
