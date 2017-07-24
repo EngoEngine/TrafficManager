@@ -59,7 +59,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 			Height:   64,
 		}
 
-		texture, err := common.PreloadedSpriteSingle("textures/city.png")
+		texture, err := common.LoadedSprite("textures/city.png")
 		if err != nil {
 			log.Println("Unable to load texture: " + err.Error())
 		}

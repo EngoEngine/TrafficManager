@@ -3,10 +3,11 @@ package main
 import (
 	"image/color"
 
-	"engo.io/TrafficManager/systems"
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
+	"github.com/EngoEngine/TrafficManager/systems"
 )
 
 const (
