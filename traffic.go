@@ -6,6 +6,8 @@ import (
 
 	"engo.io/ecs"
 	"engo.io/engo"
+	"engo.io/engo/common"
+	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
 	"github.com/EngoEngine/TrafficManager/systems"
 )
 
@@ -20,8 +22,8 @@ type myScene struct{}
 
 type HUD struct {
 	ecs.BasicEntity
-	engo.RenderComponent
-	engo.SpaceComponent
+	common.RenderComponent
+	common.SpaceComponent
 }
 
 // Type uniquely defines your game type
@@ -29,47 +31,47 @@ func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
-	engo.Files.Add("assets/textures/city.png")
+	engo.Files.Load("textures/city.png")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
-func (*myScene) Setup(world *ecs.World) {
-	engo.SetBackground(color.White)
+func (*myScene) Setup(u engo.Updater) {
+	world, _ := u.(*ecs.World)
+	common.SetBackground(color.White)
 
-	world.AddSystem(&engo.MouseSystem{})
-	world.AddSystem(&engo.RenderSystem{})
+	world.AddSystem(&common.RenderSystem{})
+	world.AddSystem(&common.MouseSystem{})
 
-	kbs := engo.NewKeyboardScroller(KeyboardScrollSpeed, engo.W, engo.D, engo.S, engo.A)
-	kbs.BindKeyboard(engo.ArrowUp, engo.ArrowRight, engo.ArrowDown, engo.ArrowLeft)
+	kbs := common.NewKeyboardScroller(KeyboardScrollSpeed, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis)
 	world.AddSystem(kbs)
 
-	world.AddSystem(&engo.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
-	world.AddSystem(&engo.MouseZoomer{ZoomSpeed})
+	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
+	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
 
 	hud := HUD{BasicEntity: ecs.NewBasic()}
-	hud.SpaceComponent = engo.SpaceComponent{
+	hud.SpaceComponent = common.SpaceComponent{
 		Position: engo.Point{0, engo.WindowHeight() - 200},
 		Width:    200,
 		Height:   200,
 	}
 
 	hudImage := image.NewUniform(color.RGBA{205, 205, 205, 255})
-	hudNRGBA := engo.ImageToNRGBA(hudImage, 200, 200)
-	hudImageObj := engo.NewImageObject(hudNRGBA)
-	hudTexture := engo.NewTexture(hudImageObj)
+	hudNRGBA := common.ImageToNRGBA(hudImage, 200, 200)
+	hudImageObj := common.NewImageObject(hudNRGBA)
+	hudTexture := common.NewTextureSingle(hudImageObj)
 
-	hud.RenderComponent = engo.NewRenderComponent(
-		hudTexture,
-		engo.Point{1, 1},
-		"hud",
-	)
-	hud.RenderComponent.SetShader(engo.HUDShader)
+	hud.RenderComponent = common.RenderComponent{
+		Repeat:   common.Repeat,
+		Drawable: hudTexture,
+		Scale:    engo.Point{1, 1},
+	}
+	hud.RenderComponent.SetShader(common.HUDShader)
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
-		case *engo.RenderSystem:
+		case *common.RenderSystem:
 			sys.Add(&hud.BasicEntity, &hud.RenderComponent, &hud.SpaceComponent)
 		}
 	}
