@@ -38,7 +38,7 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 	cb.mouseTracker.BasicEntity = ecs.NewBasic()
 	cb.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
 
-	engo.Input.RegisterButton("build", engo.Q)
+	engo.Input.RegisterButton("build", engo.KeyQ)
 
 	for _, system := range w.Systems() {
 		switch sys := system.(type) {
