@@ -68,6 +68,7 @@ func (*myScene) Setup(u engo.Updater) {
 		Scale:    engo.Point{1, 1},
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
+	hud.RenderComponent.SetZIndex(1)
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
