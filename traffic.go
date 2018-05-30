@@ -7,6 +7,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+  
 	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
 	"github.com/EngoEngine/TrafficManager/systems"
 )
@@ -18,7 +19,7 @@ const (
 	ZoomSpeed           = -0.125
 )
 
-type myScene struct{}
+type defaultScene struct{}
 
 type HUD struct {
 	ecs.BasicEntity
@@ -27,7 +28,7 @@ type HUD struct {
 }
 
 // Type uniquely defines your game type
-func (*myScene) Type() string { return "myGame" }
+func (*defaultScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
@@ -44,7 +45,6 @@ func (*myScene) Setup(u engo.Updater) {
 
 	kbs := common.NewKeyboardScroller(KeyboardScrollSpeed, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis)
 	world.AddSystem(kbs)
-
 	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
@@ -84,5 +84,6 @@ func main() {
 		Width:  800,
 		Height: 800,
 	}
-	engo.Run(opts, &myScene{})
+
+	engo.Run(opts, &defaultScene{})
 }

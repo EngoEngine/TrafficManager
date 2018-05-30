@@ -1,14 +1,19 @@
 package systems
 
 import (
-	"fmt"
-
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+
+	"fmt"
 )
 
-type MouseTracker struct {
+const cityTextureLocation = "textures/city.png"
+
+// CityAssets are the assets for the system
+var CityAssets = []string{cityTextureLocation}
+
+type CityMouseTracker struct {
 	ecs.BasicEntity
 	common.MouseComponent
 }
@@ -22,11 +27,8 @@ type City struct {
 type CityBuildingSystem struct {
 	world *ecs.World
 
-	mouseTracker MouseTracker
+	mouseTracker CityMouseTracker
 }
-
-// Remove is called whenever an Entity is removed from the scene, and thus from this system
-func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
 
 // New is the initialisation of the System
 func (cb *CityBuildingSystem) New(w *ecs.World) {
@@ -69,6 +71,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 			Scale: engo.Point{0.5, 0.5},
 		}
 
+		// Add to the system
 		for _, system := range cb.world.Systems() {
 			switch sys := system.(type) {
 			case *common.RenderSystem:
@@ -77,3 +80,6 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 		}
 	}
 }
+
+// Remove is called whenever an Entity is removed from the scene, and thus from this system
+func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
