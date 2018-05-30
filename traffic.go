@@ -7,7 +7,7 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
-  
+
 	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
 	"github.com/EngoEngine/TrafficManager/systems"
 )
@@ -19,7 +19,7 @@ const (
 	ZoomSpeed           = -0.125
 )
 
-type defaultScene struct{}
+type myScene struct{}
 
 type HUD struct {
 	ecs.BasicEntity
@@ -28,7 +28,7 @@ type HUD struct {
 }
 
 // Type uniquely defines your game type
-func (*defaultScene) Type() string { return "myGame" }
+func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
@@ -85,5 +85,5 @@ func main() {
 		Height: 800,
 	}
 
-	engo.Run(opts, &defaultScene{})
+	engo.Run(opts, &myScene{})
 }
