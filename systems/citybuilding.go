@@ -38,7 +38,7 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 	cb.mouseTracker.BasicEntity = ecs.NewBasic()
 	cb.mouseTracker.MouseComponent = common.MouseComponent{Track: true}
 
-	engo.Input.RegisterButton("build", engo.KeyQ)
+	engo.Input.RegisterButton("AddCity", engo.KeyF1)
 
 	for _, system := range w.Systems() {
 		switch sys := system.(type) {
@@ -51,12 +51,25 @@ func (cb *CityBuildingSystem) New(w *ecs.World) {
 // Update is ran every frame, with `dt` being the time
 // in seconds since the last frame
 func (cb *CityBuildingSystem) Update(dt float32) {
-	buildKey := engo.Input.Button("build")
-	if buildKey.JustPressed() {
-		fmt.Println("The gamer pressed Q")
+	if engo.Input.Button("AddCity").JustPressed() {
+		fmt.Println("The gamer pressed F1")
 
-		// Create a new city
-		city := createCity(cb)
+		city := City{BasicEntity: ecs.NewBasic()}
+
+		city.SpaceComponent = common.SpaceComponent{
+			Position: engo.Point{cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY},
+			Width:    30,
+			Height:   64,
+		}
+
+		texture, err := common.LoadedSprite("textures/city.png")
+		if err != nil {
+			panic(err)
+		}
+		city.RenderComponent = common.RenderComponent{
+			Drawable: texture,
+			Scale: engo.Point{0.5, 0.5},
+		}
 
 		// Add to the system
 		for _, system := range cb.world.Systems() {
@@ -70,24 +83,3 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 
 // Remove is called whenever an Entity is removed from the scene, and thus from this system
 func (*CityBuildingSystem) Remove(ecs.BasicEntity) {}
-
-// createCity creates a city
-func createCity(cb *CityBuildingSystem) (city City) {
-	texture, err := common.LoadedSprite(cityTextureLocation)
-	if err != nil {
-		panic(err)
-	}
-
-	city = City{BasicEntity: ecs.NewBasic()}
-	city.RenderComponent = common.RenderComponent{
-		Drawable: texture,
-		Scale:    engo.Point{0.1, 0.1},
-	}
-	city.SpaceComponent = common.SpaceComponent{
-		Position: engo.Point{cb.mouseTracker.MouseComponent.MouseX, cb.mouseTracker.MouseComponent.MouseY},
-		Width:    30,
-		Height:   64,
-	}
-
-	return city
-}

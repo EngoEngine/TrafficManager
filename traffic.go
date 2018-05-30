@@ -7,6 +7,8 @@ import (
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+  
+	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
 	"github.com/EngoEngine/TrafficManager/systems"
 )
 
@@ -29,19 +31,20 @@ type HUD struct {
 func (*defaultScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
-func (*defaultScene) Preload() {
-	engo.Files.Load(systems.CityAssets...)
+func (*myScene) Preload() {
+	engo.Files.Load("textures/city.png")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
-func (*defaultScene) Setup(u engo.Updater) {
+func (*myScene) Setup(u engo.Updater) {
 	world, _ := u.(*ecs.World)
-
 	common.SetBackground(color.White)
 
 	world.AddSystem(&common.RenderSystem{})
 	world.AddSystem(&common.MouseSystem{})
-	world.AddSystem(common.NewKeyboardScroller(400, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis))
+
+	kbs := common.NewKeyboardScroller(KeyboardScrollSpeed, engo.DefaultHorizontalAxis, engo.DefaultVerticalAxis)
+	world.AddSystem(kbs)
 	world.AddSystem(&common.EdgeScroller{EdgeScrollSpeed, EdgeWidth})
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
@@ -60,9 +63,12 @@ func (*defaultScene) Setup(u engo.Updater) {
 	hudTexture := common.NewTextureSingle(hudImageObj)
 
 	hud.RenderComponent = common.RenderComponent{
+		Repeat:   common.Repeat,
 		Drawable: hudTexture,
+		Scale:    engo.Point{1, 1},
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
+	hud.RenderComponent.SetZIndex(1)
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
