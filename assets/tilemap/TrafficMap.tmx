@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<map version="1.0" tiledversion="1.1.5" orientation="orthogonal" renderorder="right-down" width="20" height="20" tilewidth="64" tileheight="64" infinite="0" nextobjectid="1">
+ <tileset firstgid="1" name="tiles" tilewidth="64" tileheight="64" tilecount="16" columns="0">
+  <grid orientation="orthogonal" width="1" height="1"/>
+  <tile id="0">
+   <image width="64" height="64" source="mapTile_002.png"/>
+  </tile>
+  <tile id="1">
+   <image width="64" height="64" source="mapTile_003.png"/>
+  </tile>
+  <tile id="2">
+   <image width="64" height="64" source="mapTile_006.png"/>
+  </tile>
+  <tile id="3">
+   <image width="64" height="64" source="mapTile_007.png"/>
+  </tile>
+  <tile id="4">
+   <image width="64" height="64" source="mapTile_017.png"/>
+  </tile>
+  <tile id="5">
+   <image width="64" height="64" source="mapTile_018.png"/>
+  </tile>
+  <tile id="6">
+   <image width="64" height="64" source="mapTile_021.png"/>
+  </tile>
+  <tile id="7">
+   <image width="64" height="64" source="mapTile_022.png"/>
+  </tile>
+  <tile id="8">
+   <image width="64" height="64" source="mapTile_023.png"/>
+  </tile>
+  <tile id="9">
+   <image width="64" height="64" source="mapTile_027.png"/>
+  </tile>
+  <tile id="10">
+   <image width="64" height="64" source="mapTile_028.png"/>
+  </tile>
+  <tile id="11">
+   <image width="64" height="64" source="mapTile_036.png"/>
+  </tile>
+  <tile id="12">
+   <image width="64" height="64" source="mapTile_037.png"/>
+  </tile>
+  <tile id="13">
+   <image width="64" height="64" source="mapTile_042.png"/>
+  </tile>
+  <tile id="14">
+   <image width="64" height="64" source="mapTile_043.png"/>
+  </tile>
+  <tile id="15">
+   <image width="64" height="64" source="mapTile_082.png"/>
+  </tile>
+ </tileset>
+ <layer name="Tile Layer 1" width="20" height="20">
+  <data encoding="base64" compression="zlib">
+   eJxjZmBgYCGAGYnETEDMDsQcBDArkZht1LwhaR6xmHPUPDjmQsPUNo8Y84nxL73Mw4a5B8A8UuwYCubxADEviZgPB+YHYgB0Bwwz
+  </data>
+ </layer>
+</map>
