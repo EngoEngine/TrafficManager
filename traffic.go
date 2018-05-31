@@ -80,9 +80,10 @@ func (*myScene) Setup(u engo.Updater) {
 
 func main() {
 	opts := engo.RunOptions{
-		Title:  "TrafficManager",
-		Width:  800,
-		Height: 800,
+		Title:          "TrafficManager",
+		Width:          800,
+		Height:         800,
+		StandardInputs: true,
 	}
 
 	engo.Run(opts, &myScene{})
