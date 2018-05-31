@@ -118,7 +118,12 @@ func (*myScene) Setup(u engo.Updater) {
 		}
 	}
 
-	common.CameraBounds = levelData.Bounds()
+	offset := engo.Point{X: engo.WindowWidth() / 2, Y: engo.WindowHeight() / 2}
+	min := levelData.Bounds().Min
+	min.Add(offset)
+	max := levelData.Bounds().Max
+	max.Subtract(offset)
+	common.CameraBounds = engo.AABB{Min: min, Max: max}
 }
 
 func main() {
