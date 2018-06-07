@@ -38,7 +38,7 @@ func (*myScene) Type() string { return "myGame" }
 
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
-	engo.Files.Load("textures/city.png", "tilemap/TrafficMap.tmx")
+	engo.Files.Load("textures/citySheet.png", "tilemap/TrafficMap.tmx")
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -74,7 +74,7 @@ func (*myScene) Setup(u engo.Updater) {
 		Scale:    engo.Point{1, 1},
 	}
 	hud.RenderComponent.SetShader(common.HUDShader)
-	hud.RenderComponent.SetZIndex(1)
+	hud.RenderComponent.SetZIndex(1000)
 
 	for _, system := range world.Systems() {
 		switch sys := system.(type) {
