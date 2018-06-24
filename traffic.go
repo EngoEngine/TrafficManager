@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"image"
 	"image/color"
 
 	"engo.io/ecs"
 	"engo.io/engo"
 	"engo.io/engo/common"
+	"golang.org/x/image/font/gofont/gosmallcaps"
 
 	// EDIT THE FOLLOWING IMPORT TO YOUR systems package
 	"github.com/EngoEngine/TrafficManager/systems"
@@ -39,6 +41,7 @@ func (*myScene) Type() string { return "myGame" }
 // Preload is called before loading any assets from the disk, to allow you to register / queue them
 func (*myScene) Preload() {
 	engo.Files.Load("textures/citySheet.png", "tilemap/TrafficMap.tmx")
+	engo.Files.LoadReaderData("go.ttf", bytes.NewReader(gosmallcaps.TTF))
 }
 
 // Setup is called before the main loop starts. It allows you to add entities and systems to your Scene.
@@ -55,6 +58,8 @@ func (*myScene) Setup(u engo.Updater) {
 	world.AddSystem(&common.MouseZoomer{ZoomSpeed})
 
 	world.AddSystem(&systems.CityBuildingSystem{})
+	world.AddSystem(&systems.HUDTextSystem{})
+	world.AddSystem(&systems.MoneySystem{})
 
 	hud := HUD{BasicEntity: ecs.NewBasic()}
 	hud.SpaceComponent = common.SpaceComponent{
