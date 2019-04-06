@@ -1,9 +1,9 @@
 package systems
 
 import (
-	"engo.io/ecs"
-	"engo.io/engo"
-	"engo.io/engo/common"
+	"github.com/EngoEngine/ecs"
+	"github.com/EngoEngine/engo"
+	"github.com/EngoEngine/engo/common"
 
 	"fmt"
 )
@@ -68,7 +68,7 @@ func (cb *CityBuildingSystem) Update(dt float32) {
 		}
 		city.RenderComponent = common.RenderComponent{
 			Drawable: texture,
-			Scale: engo.Point{0.5, 0.5},
+			Scale:    engo.Point{0.5, 0.5},
 		}
 
 		// Add to the system
