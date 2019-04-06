@@ -1,8 +1,8 @@
 package systems
 
 import (
-	"engo.io/ecs"
-	"engo.io/engo"
+	"github.com/EngoEngine/ecs"
+	"github.com/EngoEngine/engo"
 )
 
 // CityType keeps track of the type of city
